@@ -10,6 +10,8 @@ const showCancelModal = ref(false)
 const cancelReason = ref('')
 const rating = ref(0)
 const showRatingModal = ref(false)
+const showSupportModal = ref(false)
+const supportMessage = ref('')
 
 // Mock data đơn hàng
 const order = ref({
@@ -93,6 +95,22 @@ const handleRating = () => {
     alert(`Cảm ơn bạn đã đánh giá ${rating.value} sao!`)
     showRatingModal.value = false
   }
+}
+
+const handleSupport = () => {
+  showSupportModal.value = true
+}
+
+const sendSupportMessage = () => {
+  if (supportMessage.value.trim()) {
+    alert('Yêu cầu hỗ trợ của bạn đã được gửi! Chúng tôi sẽ liên hệ sớm nhất.')
+    showSupportModal.value = false
+    supportMessage.value = ''
+  }
+}
+
+const callHotline = () => {
+  window.location.href = 'tel:1900xxxx'
 }
 
 const badge = computed(() => getStatusBadge(order.value.status))
@@ -348,7 +366,11 @@ const badge = computed(() => getStatusBadge(order.value.status))
               Đánh giá dịch vụ
             </button>
 
-            <button class="w-full flex items-center justify-center gap-2 border-2 border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+            <button 
+              @click="handleSupport"
+              type="button"
+              class="w-full flex items-center justify-center gap-2 border-2 border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors font-semibold"
+            >
               <MessageSquare class="w-5 h-5" />
               Hỗ trợ
             </button>
@@ -434,6 +456,52 @@ const badge = computed(() => getStatusBadge(order.value.status))
             class="flex-1 px-4 py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Gửi đánh giá
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Support Modal -->
+    <div v-if="showSupportModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl max-w-md w-full p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+            <MessageSquare class="w-6 h-6 text-blue-600" />
+          </div>
+          <h3 class="text-xl font-bold text-gray-900">Hỗ trợ khách hàng</h3>
+        </div>
+        
+        <p class="text-gray-600 mb-4">Chúng tôi có thể giúp gì cho bạn?</p>
+        
+        <textarea
+          v-model="supportMessage"
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+          rows="4"
+          placeholder="Mô tả vấn đề bạn gặp phải..."
+        />
+
+        <div class="space-y-3">
+          <button
+            @click="sendSupportMessage"
+            class="w-full flex items-center justify-center gap-2 bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors font-semibold"
+          >
+            <Send class="w-5 h-5" />
+            Gửi yêu cầu hỗ trợ
+          </button>
+
+          <button
+            @click="callHotline"
+            class="w-full flex items-center justify-center gap-2 bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-colors font-semibold"
+          >
+            <Phone class="w-5 h-5" />
+            Gọi hotline: 1900 xxxx
+          </button>
+
+          <button
+            @click="showSupportModal = false"
+            class="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+          >
+            Đóng
           </button>
         </div>
       </div>
