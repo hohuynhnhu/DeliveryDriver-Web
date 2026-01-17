@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Package, MapPin, ShoppingBag, User, LogOut, Bell, Settings, CreditCard } from 'lucide-vue-next';
+import { Package, MapPin, ShoppingBag, User, LogOut, Bell, Settings, CreditCard, Plus } from 'lucide-vue-next';
 import { useCustomerSession } from '~/composables/useCustomerSession';
 
 const { customer, logout } = useCustomerSession();
@@ -100,6 +100,36 @@ const stats = [
             <div class="text-sm text-gray-600">{{ stat.label }}</div>
           </div>
         </div>
+      </div>
+
+      <!-- Create Order Button - THÊM MỚI -->
+      <div class="mb-8">
+        <NuxtLink 
+          to="/customer/create"
+          class="group relative bg-gradient-to-r from-glow-primary-500 to-glow-primary-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden block"
+        >
+          <!-- Animated Background -->
+          <div class="absolute inset-0 bg-gradient-to-r from-glow-primary-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          
+          <div class="relative flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <Plus class="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h3 class="text-2xl font-bold text-white mb-1">Tạo Đơn Hàng Mới</h3>
+                <p class="text-white/80">Bắt đầu đặt hàng giao hàng ngay bây giờ</p>
+              </div>
+            </div>
+            <div class="hidden md:block">
+              <div class="text-white/80 group-hover:text-white group-hover:translate-x-2 transition-all duration-300">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </NuxtLink>
       </div>
 
       <!-- Quick Actions -->
