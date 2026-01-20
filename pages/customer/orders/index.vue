@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Package, Calendar, Clock, DollarSign, Eye, Search, Filter, Download, CheckCircle, XCircle, Truck, PackageCheck, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { Package, Calendar, Clock, DollarSign, Eye, Search, Filter, CheckCircle, XCircle, Truck, PackageCheck, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
 definePageMeta({
   middleware: 'customer-auth'
@@ -269,24 +269,16 @@ const stats = computed(() => ({
 
       <!-- Header Section -->
       <section class="mb-8">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 flex items-center gap-3">
-              <div class="w-12 h-12 bg-gradient-to-br from-glow-primary-500 to-glow-primary-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Package class="w-6 h-6 text-white" />
-              </div>
-              Đơn Hàng Của Tôi
-            </h1>
-            <p class="text-gray-600 mt-2 ml-15">
-              Quản lý và theo dõi tất cả đơn hàng của bạn
-            </p>
-          </div>
-          
-          <!-- Export Button -->
-          <button class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
-            <Download class="w-4 h-4" />
-            <span class="font-medium text-gray-700">Xuất báo cáo</span>
-          </button>
+        <div>
+          <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 flex items-center gap-3">
+            <div class="w-12 h-12 bg-gradient-to-br from-glow-primary-500 to-glow-primary-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Package class="w-6 h-6 text-white" />
+            </div>
+            Đơn Hàng Của Tôi
+          </h1>
+          <p class="text-gray-600 mt-2 ml-15">
+            Quản lý và theo dõi tất cả đơn hàng của bạn
+          </p>
         </div>
       </section>
 
