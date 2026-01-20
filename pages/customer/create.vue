@@ -14,7 +14,7 @@ const orderData = ref({
   receiverName: '',
   receiverPhone: '',
   receiverAddress: '',
-  vehicleType: '',
+  deliveryMethod: '',
   destinations: [] as Array<{ id: number; receiver: string; phone: string; address: string }>,
   note: ''
 })
@@ -28,12 +28,38 @@ const savedAddresses = [
   { id: 2, name: 'Công ty', detail: '456 Lê Lợi, Q.1, TP.HCM', phone: '0909 222 333' }
 ]
 
-// Loại xe
-const vehicleTypes = [
-  { id: 'motorbike', name: 'Xe máy', price: '15.000đ - 30.000đ', capacity: 'Dưới 30kg', icon: '🏍️' },
-  { id: 'car', name: 'Xe hơi 4 chỗ', price: '50.000đ - 100.000đ', capacity: 'Dưới 200kg', icon: '🚗' },
-  { id: 'van', name: 'Xe tải nhỏ', price: '150.000đ - 300.000đ', capacity: 'Dưới 500kg', icon: '🚐' },
-  { id: 'truck', name: 'Xe tải lớn', price: '500.000đ - 1.000.000đ', capacity: 'Trên 500kg', icon: '🚚' }
+// Phương thức giao hàng
+const deliveryMethods = [
+  { 
+    id: 'fixed-route', 
+    name: 'Tuyến đường cố định', 
+    price: '30.000đ - 50.000đ', 
+    description: 'Giao hàng theo tuyến đường đã định sẵn, thời gian ổn định',
+    deliveryTime: '2-4 giờ',
+    iconComponent: 'MapPin',
+    bgColor: 'bg-blue-100',
+    iconColor: 'text-blue-600'
+  },
+  { 
+    id: 'flexible-route', 
+    name: 'Tuyến đường tự do', 
+    price: '50.000đ - 100.000đ', 
+    description: 'Tài xế tự do chọn đường đi tối ưu, linh hoạt điểm đến',
+    deliveryTime: '1-3 giờ',
+    iconComponent: 'Truck',
+    bgColor: 'bg-green-100',
+    iconColor: 'text-green-600'
+  },
+  { 
+    id: 'emergency', 
+    name: 'Giao hàng khẩn cấp', 
+    price: '100.000đ - 200.000đ', 
+    description: 'Ưu tiên cao nhất, giao hàng nhanh nhất có thể',
+    deliveryTime: '30 phút - 1 giờ',
+    iconComponent: 'Clock',
+    bgColor: 'bg-red-100',
+    iconColor: 'text-red-600'
+  }
 ]
 
 const selectSavedAddress = (address: any, type: 'sender' | 'receiver') => {
@@ -66,8 +92,8 @@ const handleSubmit = () => {
   navigateTo('/customer/orders')
 }
 
-const selectedVehicle = computed(() => {
-  return vehicleTypes.find(v => v.id === orderData.value.vehicleType)
+const selectedMethod = computed(() => {
+  return deliveryMethods.find(m => m.id === orderData.value.deliveryMethod)
 })
 </script>
 
@@ -91,7 +117,7 @@ const selectedVehicle = computed(() => {
         <div class="flex items-center justify-between">
           <template v-for="(s, idx) in [
             { num: 1, label: 'Thông tin' },
-            { num: 2, label: 'Loại xe' },
+            { num: 2, label: 'Phương thức' },
             { num: 3, label: 'Xác nhận' }
           ]" :key="s.num">
             <div class="flex flex-col items-center flex-1">
@@ -320,37 +346,49 @@ const selectedVehicle = computed(() => {
         </button>
       </div>
 
-      <!-- Step 2: Chọn loại xe -->
+      <!-- Step 2: Chọn phương thức giao hàng -->
       <div v-if="step === 2" class="space-y-6">
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div class="flex items-center gap-3 mb-6">
             <Truck class="w-5 h-5 text-purple-600" />
-            <h2 class="text-lg font-bold text-gray-900">Chọn loại phương tiện</h2>
+            <h2 class="text-lg font-bold text-gray-900">Chọn phương thức giao hàng</h2>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 gap-4">
             <button
-              v-for="vehicle in vehicleTypes"
-              :key="vehicle.id"
-              @click="orderData.vehicleType = vehicle.id"
+              v-for="method in deliveryMethods"
+              :key="method.id"
+              @click="orderData.deliveryMethod = method.id"
               :class="[
                 'text-left p-6 border-2 rounded-xl transition-all',
-                orderData.vehicleType === vehicle.id
+                orderData.deliveryMethod === method.id
                   ? 'border-purple-600 bg-purple-50 shadow-lg shadow-purple-500/20'
                   : 'border-gray-200 hover:border-purple-300'
               ]"
             >
-              <div class="flex items-start justify-between mb-3">
-                <span class="text-4xl">{{ vehicle.icon }}</span>
-                <div v-if="orderData.vehicleType === vehicle.id" class="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-                  <Check class="w-4 h-4 text-white" />
+              <div class="flex items-start gap-4">
+                <div :class="[method.bgColor, 'w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0']">
+                  <component :is="method.iconComponent" :class="[method.iconColor, 'w-7 h-7']" />
                 </div>
-              </div>
-              <h3 class="font-bold text-gray-900 text-lg mb-1">{{ vehicle.name }}</h3>
-              <p class="text-sm text-gray-600 mb-2">Tải trọng: {{ vehicle.capacity }}</p>
-              <div class="flex items-center gap-2 text-purple-600 font-semibold">
-                <DollarSign class="w-4 h-4" />
-                {{ vehicle.price }}
+                <div class="flex-1">
+                  <div class="flex items-start justify-between mb-2">
+                    <h3 class="font-bold text-gray-900 text-lg">{{ method.name }}</h3>
+                    <div v-if="orderData.deliveryMethod === method.id" class="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+                      <Check class="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                  <p class="text-sm text-gray-600 mb-3">{{ method.description }}</p>
+                  <div class="flex items-center gap-4 flex-wrap">
+                    <div class="flex items-center gap-2 text-purple-600 font-semibold">
+                      <DollarSign class="w-4 h-4" />
+                      {{ method.price }}
+                    </div>
+                    <div class="flex items-center gap-2 text-gray-600">
+                      <Clock class="w-4 h-4" />
+                      <span class="text-sm">{{ method.deliveryTime }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </button>
           </div>
@@ -365,7 +403,7 @@ const selectedVehicle = computed(() => {
           </button>
           <button
             @click="step = 3"
-            :disabled="!orderData.vehicleType"
+            :disabled="!orderData.deliveryMethod"
             class="flex-1 flex items-center justify-center gap-2 bg-purple-600 text-white py-3 rounded-xl hover:bg-purple-700 transition-colors font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Tiếp theo
@@ -400,8 +438,9 @@ const selectedVehicle = computed(() => {
             </div>
 
             <div class="p-4 bg-orange-50 rounded-lg">
-              <h3 class="font-semibold text-gray-900 mb-2">Loại xe</h3>
-              <p class="text-sm text-gray-700">{{ selectedVehicle?.name }}</p>
+              <h3 class="font-semibold text-gray-900 mb-2">Phương thức giao hàng</h3>
+              <p class="text-sm text-gray-700">{{ selectedMethod?.name }}</p>
+              <p class="text-xs text-gray-600 mt-1">Thời gian dự kiến: {{ selectedMethod?.deliveryTime }}</p>
             </div>
 
             <div v-if="orderData.note" class="p-4 bg-gray-50 rounded-lg">
@@ -412,7 +451,7 @@ const selectedVehicle = computed(() => {
             <div class="p-4 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg border-2 border-purple-300">
               <div class="flex items-center justify-between">
                 <h3 class="font-bold text-gray-900 text-lg">Tổng cước phí ước tính</h3>
-                <p class="text-2xl font-bold text-purple-600">150.000đ</p>
+                <p class="text-2xl font-bold text-purple-600">{{ selectedMethod?.price.split(' - ')[0] }}</p>
               </div>
               <p class="text-xs text-gray-600 mt-1">* Phí chính xác sẽ được tính sau khi tài xế nhận đơn</p>
             </div>

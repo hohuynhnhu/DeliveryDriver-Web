@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Package, Calendar, Clock, DollarSign, Eye, Search, Filter, Download, CheckCircle, XCircle, Truck, PackageCheck } from 'lucide-vue-next';
+import { Package, Calendar, Clock, DollarSign, Eye, Search, Filter, Download, CheckCircle, XCircle, Truck, PackageCheck, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
 definePageMeta({
   middleware: 'customer-auth'
@@ -8,6 +8,11 @@ definePageMeta({
 const searchQuery = ref('');
 const selectedStatus = ref('all');
 
+// Phân trang
+const currentPage = ref(1);
+const itemsPerPage = ref(5);
+
+// Dữ liệu mẫu (giả lập nhiều đơn hàng)
 const orders = ref([
   {
     id: 'DH00123',
@@ -52,15 +57,103 @@ const orders = ref([
     total: '450.000đ',
     items: 4,
     shippingAddress: 'Quận 2, TP.HCM'
+  },
+  {
+    id: 'DH00119',
+    date: '11/01/2026',
+    time: '15:30',
+    status: 'completed',
+    statusText: 'Hoàn thành',
+    statusColor: 'green',
+    total: '280.000đ',
+    items: 3,
+    shippingAddress: 'Quận 5, TP.HCM'
+  },
+  {
+    id: 'DH00118',
+    date: '10/01/2026',
+    time: '11:45',
+    status: 'shipping',
+    statusText: 'Đang giao',
+    statusColor: 'yellow',
+    total: '175.000đ',
+    items: 2,
+    shippingAddress: 'Quận 10, TP.HCM'
+  },
+  {
+    id: 'DH00117',
+    date: '09/01/2026',
+    time: '14:20',
+    status: 'completed',
+    statusText: 'Hoàn thành',
+    statusColor: 'green',
+    total: '520.000đ',
+    items: 6,
+    shippingAddress: 'Quận Bình Thạnh, TP.HCM'
+  },
+  {
+    id: 'DH00116',
+    date: '08/01/2026',
+    time: '10:00',
+    status: 'cancelled',
+    statusText: 'Đã huỷ',
+    statusColor: 'red',
+    total: '125.000đ',
+    items: 2,
+    shippingAddress: 'Quận 4, TP.HCM'
+  },
+  {
+    id: 'DH00115',
+    date: '07/01/2026',
+    time: '16:30',
+    status: 'completed',
+    statusText: 'Hoàn thành',
+    statusColor: 'green',
+    total: '390.000đ',
+    items: 4,
+    shippingAddress: 'Quận Tân Bình, TP.HCM'
+  },
+  {
+    id: 'DH00114',
+    date: '06/01/2026',
+    time: '13:15',
+    status: 'completed',
+    statusText: 'Hoàn thành',
+    statusColor: 'green',
+    total: '210.000đ',
+    items: 3,
+    shippingAddress: 'Quận 6, TP.HCM'
+  },
+  {
+    id: 'DH00113',
+    date: '05/01/2026',
+    time: '09:45',
+    status: 'completed',
+    statusText: 'Hoàn thành',
+    statusColor: 'green',
+    total: '450.000đ',
+    items: 5,
+    shippingAddress: 'Quận 8, TP.HCM'
+  },
+  {
+    id: 'DH00112',
+    date: '04/01/2026',
+    time: '15:00',
+    status: 'completed',
+    statusText: 'Hoàn thành',
+    statusColor: 'green',
+    total: '180.000đ',
+    items: 2,
+    shippingAddress: 'Quận 11, TP.HCM'
   }
 ]);
 
-const statusFilters = [
-  { value: 'all', label: 'Tất cả', count: 4 },
-  { value: 'shipping', label: 'Đang giao', count: 1 },
-  { value: 'completed', label: 'Hoàn thành', count: 2 },
-  { value: 'cancelled', label: 'Đã huỷ', count: 1 }
-];
+const statusFilters = computed(() => [
+  { value: 'all', label: 'Tất cả', count: orders.value.length },
+  { value: 'shipping', label: 'Đang giao', count: orders.value.filter(o => o.status === 'shipping').length },
+  { value: 'completed', label: 'Hoàn thành', count: orders.value.filter(o => o.status === 'completed').length },
+  { value: 'cancelled', label: 'Đã huỷ', count: orders.value.filter(o => o.status === 'cancelled').length }
+]);
 
 const getStatusIcon = (status: string) => {
   switch(status) {
@@ -81,6 +174,7 @@ const getStatusBadgeClass = (color: string) => {
   return classes[color] || classes.blue;
 };
 
+// Lọc đơn hàng
 const filteredOrders = computed(() => {
   let result = orders.value;
   
@@ -96,6 +190,77 @@ const filteredOrders = computed(() => {
   
   return result;
 });
+
+// Tính toán phân trang
+const totalPages = computed(() => 
+  Math.ceil(filteredOrders.value.length / itemsPerPage.value)
+);
+
+const paginatedOrders = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return filteredOrders.value.slice(start, end);
+});
+
+// Các trang hiển thị
+const visiblePages = computed(() => {
+  const pages = [];
+  const total = totalPages.value;
+  const current = currentPage.value;
+  
+  // Luôn hiển thị trang đầu
+  pages.push(1);
+  
+  // Tính toán các trang ở giữa
+  let start = Math.max(2, current - 1);
+  let end = Math.min(total - 1, current + 1);
+  
+  // Thêm dấu ... nếu cần
+  if (start > 2) {
+    pages.push('...');
+  }
+  
+  // Thêm các trang ở giữa
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  
+  // Thêm dấu ... nếu cần
+  if (end < total - 1) {
+    pages.push('...');
+  }
+  
+  // Luôn hiển thị trang cuối (nếu có nhiều hơn 1 trang)
+  if (total > 1) {
+    pages.push(total);
+  }
+  
+  return pages;
+});
+
+// Thay đổi trang
+const goToPage = (page: number | string) => {
+  if (typeof page === 'number' && page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+    // Scroll lên đầu danh sách
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
+
+// Reset về trang 1 khi filter thay đổi
+watch([selectedStatus, searchQuery], () => {
+  currentPage.value = 1;
+});
+
+// Tính toán thống kê
+const stats = computed(() => ({
+  total: orders.value.length,
+  shipping: orders.value.filter(o => o.status === 'shipping').length,
+  completed: orders.value.filter(o => o.status === 'completed').length,
+  totalSpent: orders.value
+    .filter(o => o.status === 'completed')
+    .reduce((sum, o) => sum + parseFloat(o.total.replace(/[đ.,]/g, '')), 0)
+}));
 </script>
 
 <template>
@@ -131,7 +296,7 @@ const filteredOrders = computed(() => {
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm text-gray-600 mb-1">Tổng đơn hàng</p>
-              <p class="text-2xl font-bold text-gray-900">4</p>
+              <p class="text-2xl font-bold text-gray-900">{{ stats.total }}</p>
             </div>
             <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
               <Package class="w-6 h-6 text-blue-600" />
@@ -143,7 +308,7 @@ const filteredOrders = computed(() => {
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm text-gray-600 mb-1">Đang giao</p>
-              <p class="text-2xl font-bold text-yellow-600">1</p>
+              <p class="text-2xl font-bold text-yellow-600">{{ stats.shipping }}</p>
             </div>
             <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
               <Truck class="w-6 h-6 text-yellow-600" />
@@ -155,7 +320,7 @@ const filteredOrders = computed(() => {
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm text-gray-600 mb-1">Hoàn thành</p>
-              <p class="text-2xl font-bold text-green-600">2</p>
+              <p class="text-2xl font-bold text-green-600">{{ stats.completed }}</p>
             </div>
             <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
               <CheckCircle class="w-6 h-6 text-green-600" />
@@ -167,7 +332,7 @@ const filteredOrders = computed(() => {
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm text-gray-600 mb-1">Tổng chi tiêu</p>
-              <p class="text-2xl font-bold text-glow-primary-600">1.01M</p>
+              <p class="text-2xl font-bold text-glow-primary-600">{{ (stats.totalSpent / 1000).toFixed(2) }}K</p>
             </div>
             <div class="w-12 h-12 bg-glow-primary-100 rounded-xl flex items-center justify-center">
               <DollarSign class="w-6 h-6 text-glow-primary-600" />
@@ -217,8 +382,34 @@ const filteredOrders = computed(() => {
 
       <!-- Orders List -->
       <section class="space-y-4">
+        <!-- Hiển thị thông tin phân trang -->
+        <div class="flex items-center justify-between text-sm text-gray-600 px-2">
+          <p>
+            Hiển thị <span class="font-semibold text-gray-900">{{ (currentPage - 1) * itemsPerPage + 1 }}</span> 
+            đến <span class="font-semibold text-gray-900">{{ Math.min(currentPage * itemsPerPage, filteredOrders.length) }}</span> 
+            trong tổng số <span class="font-semibold text-gray-900">{{ filteredOrders.length }}</span> đơn hàng
+          </p>
+          
+          <!-- Items per page selector -->
+          <div class="flex items-center gap-2">
+            <span>Hiển thị:</span>
+            <select 
+              v-model="itemsPerPage"
+              class="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-glow-primary-500 focus:border-transparent outline-none"
+              @change="currentPage = 1"
+            >
+              <option :value="5">5</option>
+              <option :value="10">10</option>
+              <option :value="20">20</option>
+              <option :value="50">50</option>
+            </select>
+            <span>đơn/trang</span>
+          </div>
+        </div>
+
+        <!-- Orders Cards -->
         <div
-          v-for="order in filteredOrders"
+          v-for="order in paginatedOrders"
           :key="order.id"
           class="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all overflow-hidden group"
         >
@@ -319,6 +510,62 @@ const filteredOrders = computed(() => {
             <Package class="w-5 h-5" />
             Bắt đầu mua sắm
           </NuxtLink>
+        </div>
+
+        <!-- Pagination -->
+        <div 
+          v-if="totalPages > 1"
+          class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6"
+        >
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <!-- Previous Button -->
+            <button
+              @click="goToPage(currentPage - 1)"
+              :disabled="currentPage === 1"
+              class="flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              :class="currentPage === 1 ? 'text-gray-400' : 'text-gray-700'"
+            >
+              <ChevronLeft class="w-5 h-5" />
+              <span class="hidden sm:inline">Trang trước</span>
+            </button>
+
+            <!-- Page Numbers -->
+            <div class="flex items-center gap-2 flex-wrap justify-center">
+              <button
+                v-for="(page, index) in visiblePages"
+                :key="index"
+                @click="goToPage(page)"
+                :disabled="page === '...'"
+                class="w-10 h-10 rounded-xl font-semibold transition-all"
+                :class="[
+                  page === currentPage 
+                    ? 'bg-glow-primary-600 text-white shadow-lg shadow-glow-primary-500/30' 
+                    : page === '...'
+                    ? 'cursor-default text-gray-400'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ]"
+              >
+                {{ page }}
+              </button>
+            </div>
+
+            <!-- Next Button -->
+            <button
+              @click="goToPage(currentPage + 1)"
+              :disabled="currentPage === totalPages"
+              class="flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              :class="currentPage === totalPages ? 'text-gray-400' : 'text-gray-700'"
+            >
+              <span class="hidden sm:inline">Trang sau</span>
+              <ChevronRight class="w-5 h-5" />
+            </button>
+          </div>
+          
+          <!-- Page info -->
+          <div class="text-center mt-4 text-sm text-gray-600">
+            Trang <span class="font-semibold text-gray-900">{{ currentPage }}</span> 
+            / <span class="font-semibold text-gray-900">{{ totalPages }}</span>
+          </div>
         </div>
       </section>
 
