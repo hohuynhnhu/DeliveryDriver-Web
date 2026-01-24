@@ -26,6 +26,7 @@ const navLinks = [
   { name: 'Đơn Hàng', path: '/admin/orders', icon: ShoppingCart },
   { name: 'Shipper', path: '/admin/products', icon: Package },
   { name: 'Khách Hàng', path: '/admin/customers', icon: Users },
+  { name: 'Bản đồ', path: '/map/map', icon: FileText },
 ];
 
 // ===== NOTIFICATIONS (có thể fetch từ API sau) =====
