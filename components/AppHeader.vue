@@ -1,34 +1,88 @@
 <script setup lang="ts">
 import { Bell, Settings, User, Menu, X, LayoutDashboard, Package, ShoppingCart, Users, BarChart3, LogOut, ChevronDown, FileText } from 'lucide-vue-next';
 
+// ===== STATE =====
 const isMenuOpen = ref(false);
 const showNotifications = ref(false);
 const showUserMenu = ref(false);
 
+// ===== AUTH COMPOSABLE =====
+const { user, logout, isAuthenticated } = useAuth();
+
+// ===== TOGGLE FUNCTIONS =====
 const toggleMenu = () => {
   isMenuOpen.value = !isMenuOpen.value;
 };
 
+// Đóng dropdown khi click ra ngoài
+const closeDropdowns = () => {
+  showNotifications.value = false;
+  showUserMenu.value = false;
+};
+
+// ===== NAVIGATION LINKS =====
 const navLinks = [
   { name: 'Tổng Quan', path: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Đơn Hàng', path: '/admin/orders', icon: ShoppingCart },
   { name: 'Shipper', path: '/admin/products', icon: Package },
   { name: 'Khách Hàng', path: '/admin/customers', icon: Users },
-  // { name: 'Thống Kê & Báo Cáo', path: '/admin/reports', icon: BarChart3 },
 ];
 
-const notifications = [
+// ===== NOTIFICATIONS (có thể fetch từ API sau) =====
+const notifications = ref([
   { id: 1, text: 'Đơn hàng mới #1234 cần xử lý', time: '5 phút trước', unread: true, type: 'order' },
   { id: 2, text: 'Sản phẩm "Serum Vitamin C" sắp hết hàng', time: '1 giờ trước', unread: true, type: 'warning' },
   { id: 3, text: '12 khách hàng mới đăng ký hôm nay', time: '2 giờ trước', unread: false, type: 'info' },
-];
+]);
 
-const adminInfo = {
-  name: 'Nguyễn Văn A',
-  email: 'admin@DeliveryDriver.com',
+// ===== COMPUTED: Thông tin admin từ user =====
+const adminInfo = computed(() => ({
+  name: user.value?.full_name || user.value?.email?.split('@')[0] || 'Admin',
+  email: user.value?.email || '',
   role: 'Quản Trị Viên',
-  avatar: ''
+  avatar: user.value?.avatar_url || '',
+  initials: getInitials(user.value?.full_name || user.value?.email || 'A'),
+}));
+
+// ===== COMPUTED: Số thông báo chưa đọc =====
+const unreadCount = computed(() => {
+  return notifications.value.filter(n => n.unread).length;
+});
+
+// ===== HELPER: Lấy chữ cái đầu =====
+function getInitials(name: string): string {
+  if (!name) return 'A';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  }
+  return name[0].toUpperCase();
+}
+
+// ===== LOGOUT =====
+const handleLogout = async () => {
+  showUserMenu.value = false;
+  await logout();
 };
+
+// ===== CLICK OUTSIDE TO CLOSE =====
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
+
+function handleClickOutside(event: MouseEvent) {
+  const target = event.target as HTMLElement;
+  if (!target.closest('.notifications-dropdown') && !target.closest('.notifications-btn')) {
+    showNotifications.value = false;
+  }
+  if (!target.closest('.user-dropdown') && !target.closest('.user-btn')) {
+    showUserMenu.value = false;
+  }
+}
 </script>
 
 <template>
@@ -65,13 +119,14 @@ const adminInfo = {
         <!-- Right Actions -->
         <div class="flex items-center gap-3">
           <!-- Notifications -->
-          <div class="relative">
+          <div class="relative notifications-dropdown">
             <button 
               @click="showNotifications = !showNotifications"
-              class="relative p-2.5 text-gray-600 hover:text-glow-primary-600 hover:bg-gray-50 rounded-lg transition-all"
+              class="notifications-btn relative p-2.5 text-gray-600 hover:text-glow-primary-600 hover:bg-gray-50 rounded-lg transition-all"
             >
               <Bell class="w-5 h-5" />
-              <span class="absolute top-1.5 right-1.5 flex h-2 w-2">
+              <!-- Badge số thông báo -->
+              <span v-if="unreadCount > 0" class="absolute top-1.5 right-1.5 flex h-2 w-2">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
               </span>
@@ -85,7 +140,9 @@ const adminInfo = {
               <div class="px-4 py-3 bg-gradient-to-r from-glow-primary-50 to-purple-50 border-b border-gray-200">
                 <div class="flex items-center justify-between">
                   <h3 class="font-semibold text-gray-900">Thông Báo</h3>
-                  <span class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">2</span>
+                  <span v-if="unreadCount > 0" class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {{ unreadCount }}
+                  </span>
                 </div>
               </div>
               <div class="max-h-96 overflow-y-auto">
@@ -104,9 +161,17 @@ const adminInfo = {
                     </div>
                   </div>
                 </div>
+                
+                <!-- Empty state -->
+                <div v-if="notifications.length === 0" class="px-4 py-8 text-center">
+                  <Bell class="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p class="text-sm text-gray-500">Không có thông báo mới</p>
+                </div>
               </div>
               <div class="px-4 py-3 bg-gray-50 border-t border-gray-200">
-                <a href="/admin/notifications" class="text-sm text-glow-primary-600 hover:text-glow-primary-700 font-medium">Xem tất cả thông báo →</a>
+                <NuxtLink to="/admin/notifications" class="text-sm text-glow-primary-600 hover:text-glow-primary-700 font-medium">
+                  Xem tất cả thông báo →
+                </NuxtLink>
               </div>
             </div>
           </div>
@@ -120,14 +185,25 @@ const adminInfo = {
           </NuxtLink>
 
           <!-- User Menu -->
-          <div class="relative">
+          <div class="relative user-dropdown">
             <button 
               @click="showUserMenu = !showUserMenu"
-              class="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-all"
+              class="user-btn flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-all"
             >
-              <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <User class="w-4 h-4 text-white" />
+              <!-- Avatar -->
+              <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center overflow-hidden">
+                <img 
+                  v-if="adminInfo.avatar" 
+                  :src="adminInfo.avatar" 
+                  :alt="adminInfo.name"
+                  class="w-full h-full object-cover"
+                />
+                <span v-else class="text-white text-sm font-semibold">
+                  {{ adminInfo.initials }}
+                </span>
               </div>
+              
+              <!-- User Info -->
               <div class="hidden md:flex flex-col items-start">
                 <span class="text-sm font-semibold text-gray-900">{{ adminInfo.name }}</span>
                 <span class="text-xs text-gray-500">{{ adminInfo.role }}</span>
@@ -142,20 +218,31 @@ const adminInfo = {
             >
               <div class="px-4 py-3 bg-gradient-to-r from-glow-primary-50 to-purple-50 border-b border-gray-200">
                 <p class="text-sm font-semibold text-gray-900">{{ adminInfo.name }}</p>
-                <p class="text-xs text-gray-500">{{ adminInfo.email }}</p>
+                <p class="text-xs text-gray-500 truncate">{{ adminInfo.email }}</p>
               </div>
               <div class="py-2">
-                <a href="/admin/profile" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                <NuxtLink 
+                  to="/admin/profile" 
+                  class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  @click="showUserMenu = false"
+                >
                   <User class="w-4 h-4" />
                   Thông Tin Cá Nhân
-                </a>
-                <a href="/admin/settings" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                </NuxtLink>
+                <NuxtLink 
+                  to="/admin/settings" 
+                  class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  @click="showUserMenu = false"
+                >
                   <Settings class="w-4 h-4" />
                   Cài Đặt
-                </a>
+                </NuxtLink>
               </div>
               <div class="border-t border-gray-200 py-2">
-                <button class="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors w-full">
+                <button 
+                  @click="handleLogout"
+                  class="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors w-full"
+                >
                   <LogOut class="w-4 h-4" />
                   Đăng Xuất
                 </button>
@@ -186,6 +273,15 @@ const adminInfo = {
           <component :is="link.icon" class="w-5 h-5" />
           {{ link.name }}
         </NuxtLink>
+        
+        <!-- Mobile Logout -->
+        <button 
+          @click="handleLogout"
+          class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-all w-full mt-2"
+        >
+          <LogOut class="w-5 h-5" />
+          Đăng Xuất
+        </button>
       </nav>
     </div>
   </header>
