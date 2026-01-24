@@ -1,32 +1,53 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+//middleware
+definePageMeta
+({
+  middleware: 'customer-auth',
+})
+//composables
+const {register,isLoading,error,clearError}= useAuth()
+const router=useRouter()
 
-const name = ref('')
-const email = ref('')
-const password = ref('')
-const confirmPassword = ref('')
-const error = ref('')
-const success = ref(false)
+//state
+const form= reactive({
+  name: '',
+  email: '',
+  phone: '',
+  password: '',
+  confirmPassword: ''
+})
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
+const successMessage = ref('')
 
-const handleRegister = () => {
-  error.value = ''
+//computed
+const passwordsMatch = computed(() => form.password === form.confirmPassword)
 
-  if (!name.value || !email.value || !password.value || !confirmPassword.value) {
-    error.value = 'Vui lòng nhập đầy đủ thông tin'
-    return
-  }
+//methods
+const handleRegister = async () => {
 
-  if (password.value !== confirmPassword.value) {
+  if(form.password !== form.confirmPassword) {
     error.value = 'Mật khẩu xác nhận không khớp'
     return
   }
-
-  //  MOCK đăng ký (chưa có backend)
-  success.value = true
-
-  setTimeout(() => {
-    navigateTo('/login')
-  }, 1500)
+  const success = await register({
+    full_name: form.name,
+    email: form.email,
+    phone: form.phone,
+    password: form.password
+  })
+  if(success) {
+    clearError()
+    successMessage.value = 'Đăng ký thành công! Đang chuyển sang trang đăng nhập...'
+    setTimeout(() => {
+      router.push('/login')
+    }, 1500)
+  }
+  if (!form.name || !form.email || !form.password || !form.confirmPassword) {
+    error.value = 'Vui lòng nhập đầy đủ thông tin'
+    return
+  }
 }
 </script>
 
@@ -49,7 +70,7 @@ const handleRegister = () => {
             Họ và tên
           </label>
           <input
-            v-model="name"
+            v-model="form.name"
             type="text"
             class="w-full rounded-lg border-gray-300 focus:ring-glow-primary-500 focus:border-glow-primary-500"
             placeholder="Nguyễn Văn A"
@@ -62,10 +83,22 @@ const handleRegister = () => {
             Email
           </label>
           <input
-            v-model="email"
+            v-model="form.email"
             type="email"
             class="w-full rounded-lg border-gray-300 focus:ring-glow-primary-500 focus:border-glow-primary-500"
             placeholder="example@email.com"
+          />
+        </div>
+        //phone
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Số điện thoại
+          </label>
+          <input
+            v-model="form.phone"
+            type="tel"
+            class="w-full rounded-lg border-gray-300 focus:ring-glow-primary-500 focus:border-glow-primary-500"
+            placeholder="0123456789"
           />
         </div>
 
@@ -75,7 +108,7 @@ const handleRegister = () => {
             Mật khẩu
           </label>
           <input
-            v-model="password"
+            v-model="form.password"
             type="password"
             class="w-full rounded-lg border-gray-300 focus:ring-glow-primary-500 focus:border-glow-primary-500"
             placeholder="••••••••"
@@ -88,7 +121,7 @@ const handleRegister = () => {
             Xác nhận mật khẩu
           </label>
           <input
-            v-model="confirmPassword"
+            v-model="form.confirmPassword"
             type="password"
             class="w-full rounded-lg border-gray-300 focus:ring-glow-primary-500 focus:border-glow-primary-500"
             placeholder="••••••••"
@@ -101,8 +134,8 @@ const handleRegister = () => {
         </p>
 
         <!-- Success -->
-        <p v-if="success" class="text-sm text-green-600">
-          Đăng ký thành công! Đang chuyển sang trang đăng nhập...
+        <p v-if="successMessage" class="text-sm text-green-600">
+          {{ successMessage }}
         </p>
 
         <!-- Submit -->
