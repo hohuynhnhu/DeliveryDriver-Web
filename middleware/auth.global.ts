@@ -1,14 +1,21 @@
-import { useAuth } from '../composables/useAuth';
+export default defineNuxtRouteMiddleware((to, from) => {
+  // Chỉ chạy trên client
+  if (import.meta.server) return
 
-export default defineNuxtRouteMiddleware(async (to) => {
-    // Only run on client side
-    if (process.server) {
-        return;
-    }
+  const { checkAuth } = useAuth()
+  const isAuthenticated = checkAuth()
 
-    // Redirect root path to dashboard
-    if (to.path === "/") {
-        // return navigateTo("/");
-    }
-});
+  // Các trang public (không cần đăng nhập)
+  const publicPages = ['/login', '/register', '/forgot-password']
+  const isPublicPage = publicPages.includes(to.path)
 
+  // Chưa đăng nhập + vào trang protected → redirect về login
+  if (!isAuthenticated && !isPublicPage) {
+    return navigateTo('/login')
+  }
+
+  // Đã đăng nhập + vào trang login/register → redirect về home
+  if (isAuthenticated && isPublicPage) {
+    return navigateTo('/')
+  }
+})
