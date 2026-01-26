@@ -2,10 +2,14 @@
 definePageMeta({
   layout: 'default'
 })
+
 import { Mail, Lock, LogIn, ArrowRight, Package, ShieldCheck, Eye, EyeOff } from 'lucide-vue-next';
 import { useCustomerSession } from '~/composables/useCustomerSession';
 
 const route = useRoute();
+const router = useRouter();
+
+// Xác định mode từ query parameter
 const isAdminMode = computed(() => route.query.type === 'admin');
 
 const { login } = useCustomerSession();
@@ -16,7 +20,7 @@ const showPassword = ref(false);
 const isLoading = ref(false);
 const errorMessage = ref('');
 
-// Tài khoản admin mẫu
+// Admin credentials
 const ADMIN_CREDENTIALS = {
   email: 'admin@deliverydriver.com',
   password: 'admin123'
@@ -24,6 +28,12 @@ const ADMIN_CREDENTIALS = {
 
 const handleLogin = async () => {
   try {
+    // Validate input
+    if (!email.value || !password.value) {
+      errorMessage.value = 'Vui lòng nhập đầy đủ email và mật khẩu!';
+      return;
+    }
+
     isLoading.value = true;
     errorMessage.value = '';
     
@@ -31,7 +41,7 @@ const handleLogin = async () => {
     await new Promise(resolve => setTimeout(resolve, 800));
     
     if (isAdminMode.value) {
-      // Kiểm tra tài khoản admin
+      // Admin login
       if (email.value === ADMIN_CREDENTIALS.email && password.value === ADMIN_CREDENTIALS.password) {
         login({
           id: 999,
@@ -39,20 +49,20 @@ const handleLogin = async () => {
           email: email.value,
           role: 'admin'
         });
-        await navigateTo('/manager/dashboard');
+        await router.push('/manager/dashboard');
       } else {
         errorMessage.value = 'Email hoặc mật khẩu admin không đúng!';
         isLoading.value = false;
       }
     } else {
-      // Customer login (không kiểm tra - demo mode)
+      // Customer login (demo mode - không kiểm tra credentials)
       login({
         id: 1,
         name: 'Customer Test',
         email: email.value,
         role: 'customer'
       });
-      await navigateTo('/customer');
+      await router.push('/customer');
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -60,6 +70,14 @@ const handleLogin = async () => {
     isLoading.value = false;
   }
 };
+
+// Reset form khi chuyển mode
+watch(() => route.query.type, () => {
+  email.value = '';
+  password.value = '';
+  errorMessage.value = '';
+  showPassword.value = false;
+});
 </script>
 
 <template>
@@ -97,7 +115,7 @@ const handleLogin = async () => {
           </p>
         </div>
 
-        <!-- Demo Credentials (chỉ hiện khi admin mode) -->
+        <!-- Demo Credentials (only Admin) -->
         <div v-if="isAdminMode" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p class="text-xs text-blue-700 font-semibold mb-1">🔐 Demo Admin Credentials:</p>
           <p class="text-xs text-blue-600">Email: admin@deliverydriver.com</p>
@@ -119,7 +137,6 @@ const handleLogin = async () => {
                 v-model="email"
                 type="email"
                 :placeholder="isAdminMode ? 'admin@deliverydriver.com' : 'example@email.com'"
-                required
                 class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-glow-primary-500 focus:border-transparent transition-all outline-none"
               />
             </div>
@@ -139,7 +156,6 @@ const handleLogin = async () => {
                 v-model="password"
                 :type="showPassword ? 'text' : 'password'"
                 placeholder="••••••••"
-                required
                 class="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-glow-primary-500 focus:border-transparent transition-all outline-none"
               />
               <button
@@ -153,17 +169,13 @@ const handleLogin = async () => {
             </div>
           </div>
 
-          <!-- Remember & Forgot -->
-          <div class="flex items-center justify-between text-sm">
+          <!-- Remember & Forgot (Customer only) -->
+          <div v-if="!isAdminMode" class="flex items-center justify-between text-sm">
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" class="w-4 h-4 rounded border-gray-300 text-glow-primary-600 focus:ring-glow-primary-500">
               <span class="text-gray-600">Ghi nhớ đăng nhập</span>
             </label>
-            <a 
-              v-if="!isAdminMode"
-              href="#" 
-              class="text-glow-primary-600 hover:text-glow-primary-700 font-medium"
-            >
+            <a href="#" class="text-glow-primary-600 hover:text-glow-primary-700 font-medium">
               Quên mật khẩu?
             </a>
           </div>
@@ -187,7 +199,7 @@ const handleLogin = async () => {
             :to="isAdminMode ? '/login' : '/login?type=admin'"
             class="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-glow-primary-600 font-medium transition-colors group"
           >
-            {{ isAdminMode ? 'Đăng nhập dành cho Khách hàng' : 'Đăng nhập dành cho Admin' }}
+            {{ isAdminMode ? '← Đăng nhập Khách hàng' : 'Đăng nhập Admin →' }}
             <ArrowRight class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </NuxtLink>
         </div>
@@ -205,7 +217,7 @@ const handleLogin = async () => {
 
           <!-- Social Login -->
           <div class="grid grid-cols-2 gap-3">
-            <button class="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
+            <button type="button" class="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
               <svg class="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -214,7 +226,7 @@ const handleLogin = async () => {
               </svg>
               <span class="text-sm font-medium text-gray-700">Google</span>
             </button>
-            <button class="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
+            <button type="button" class="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
               <svg class="w-5 h-5" fill="#1877F2" viewBox="0 0 24 24">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
               </svg>
