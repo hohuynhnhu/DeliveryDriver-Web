@@ -89,7 +89,6 @@ const handleRegister = async () => {
             placeholder="example@email.com"
           />
         </div>
-        //phone
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
             Số điện thoại

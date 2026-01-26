@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useCustomerSession } from '~/composables/useCustomerSession';
+import { useCustomerSession } from '@/composables/useCustomerSession';
 import { LayoutDashboard, Package, Users, TrendingUp, ShoppingCart, DollarSign, AlertCircle, LogOut, FileText, UserCheck, Activity, Home, Zap } from 'lucide-vue-next';
 
 const { customer, logout } = useCustomerSession();

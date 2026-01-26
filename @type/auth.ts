@@ -1,5 +1,6 @@
 export interface User{
     id: string
+    role: 'admin' | 'customer'
     email:string
     full_name:string | null
     phone:string | null

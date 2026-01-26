@@ -1,4 +1,3 @@
-
 import { API_ENDPOINTS, STORAGE_KEYS } from '@/utils/constants'
 import type { User, AuthResponse, LoginRequest, RegisterRequest } from '@/@type/auth'
 
@@ -10,9 +9,10 @@ export const useAuth = () => {
   const user = useState<User | null>('auth_user', () => null)
   const isLoading = useState<boolean>('auth_loading', () => false)
   const error = useState<string | null>('auth_error', () => null)
-
+  
   // ===== COMPUTED =====
   const isAuthenticated = computed(() => !!user.value)
+  const role = computed(() => user.value?.role || null)
 
   // ===== METHODS =====
 
@@ -169,6 +169,7 @@ export const useAuth = () => {
   return {
     // State
     user,
+    role,  // ✅ Đã có rồi nhưng cần đảm bảo nó ở đây
     isLoading,
     error,
     isAuthenticated,
