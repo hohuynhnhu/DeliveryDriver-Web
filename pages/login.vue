@@ -34,17 +34,17 @@ const handleLogin = async () => {
   }
 };
 
-// Reset form khi chuyển mode
-watch(() => route.query.type, () => {
-  email.value = '';
-  password.value = '';
-  errorMessage.value = '';
-  showPassword.value = false;
-});
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-glow-primary-50/30 flex items-center justify-center p-4">
+<div
+  class="fixed inset-0 z-[9999] isolate
+         bg-gradient-to-br from-gray-50 via-white to-glow-primary-50/30
+         flex items-start justify-center
+         pt-20 pb-4 px-4 overflow-y-auto"
+>
+
+
     <!-- Decorative Background -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none">
       <div class="absolute -top-40 -right-40 w-96 h-96 bg-glow-primary-400/20 rounded-full blur-3xl"></div>
@@ -108,6 +108,7 @@ watch(() => route.query.type, () => {
                 v-model="form.password"
                 :type="showPassword ? 'text' : 'password'"
                 placeholder="••••••••"
+                required
                 class="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-glow-primary-500 focus:border-transparent transition-all outline-none"
               />
               <button
@@ -121,8 +122,8 @@ watch(() => route.query.type, () => {
             </div>
           </div>
 
-          <!-- Remember & Forgot (Customer only) -->
-          <div v-if="!isAdminMode" class="flex items-center justify-between text-sm">
+          <!-- Remember & Forgot -->
+          <div class="flex items-center justify-between text-sm">
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" class="w-4 h-4 rounded border-gray-300 text-glow-primary-600 focus:ring-glow-primary-500">
               <span class="text-gray-600">Ghi nhớ đăng nhập</span>

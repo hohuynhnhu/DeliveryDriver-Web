@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { useCustomerSession } from '@/composables/useCustomerSession';
-import { LayoutDashboard, Package, Users, TrendingUp, ShoppingCart, DollarSign, AlertCircle, LogOut, FileText, UserCheck, Activity, Home, Zap } from 'lucide-vue-next';
+import { Package, Users, AlertCircle, LogOut, UserCheck, Activity, Home, Zap, ShoppingCart, DollarSign } from 'lucide-vue-next';
+
+// Vô hiệu hóa layout mặc định
+definePageMeta({
+  layout: false
+});
 
 const { customer, logout } = useCustomerSession();
 const route = useRoute();
@@ -9,10 +14,11 @@ const router = useRouter();
 // Determine active section based on current route
 const activeSection = computed(() => {
   const path = route.path;
+  if (path === '/manager/orders') return 'theodoi';
+  if (path === '/manager/orders/assign') return 'phancong';
+  if (path === '/manager/orders/emergency') return 'dotxuat';
+  if (path.match(/^\/manager\/orders\/\d+$/)) return 'xulydh';
   if (path === '/manager/dashboard') return 'trangchu';
-  if (path.includes('/manager/orders/assign')) return 'phancong';
-  if (path.includes('/manager/orders/emergency')) return 'dotxuat';
-  if (path === '/manager/orders' || path.includes('/manager/orders/')) return 'theodoi';
   return 'trangchu';
 });
 
@@ -50,27 +56,7 @@ const stats = ref([
 
 const handleLogout = () => {
   logout();
-};
-
-// Hàm điều hướng
-const goToOrderDetail = async () => {
-  await router.push('/manager/orders/1');
-};
-
-const goToOrderList = async () => {
-  await router.push('/manager/orders');
-};
-
-const goToAssign = async () => {
-  await router.push('/manager/orders/assign');
-};
-
-const goToEmergency = async () => {
-  await router.push('/manager/orders/emergency');
-};
-
-const goDashboard = async () => {
-  await router.push('/manager/dashboard');
+  router.push('/');
 };
 </script>
 
@@ -95,9 +81,10 @@ const goDashboard = async () => {
           <!-- Navigation Menu -->
           <nav class="hidden md:block">
             <ul class="flex items-center gap-1">
+              <!-- Trang Chủ -->
               <li>
-                <button
-                  @click="goDashboard"
+                <NuxtLink
+                  to="/manager/dashboard"
                   :class="[
                     'px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center',
                     activeSection === 'trangchu' 
@@ -107,11 +94,13 @@ const goDashboard = async () => {
                 >
                   <Home class="w-4 h-4 mr-2" />
                   Trang Chủ
-                </button>
+                </NuxtLink>
               </li>
+              
+              <!-- Xử lý đơn hàng -->
               <li>
-                <button
-                  @click="goToOrderDetail"
+                <NuxtLink
+                  to="/manager/orders/1"
                   :class="[
                     'px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center',
                     activeSection === 'xulydh' 
@@ -121,11 +110,13 @@ const goDashboard = async () => {
                 >
                   <Package class="w-4 h-4 mr-2" />
                   Xử lý đơn hàng
-                </button>
+                </NuxtLink>
               </li>
+              
+              <!-- Phân Công Đơn -->
               <li>
-                <button
-                  @click="goToAssign"
+                <NuxtLink
+                  to="/manager/orders/assign"
                   :class="[
                     'px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center',
                     activeSection === 'phancong' 
@@ -135,11 +126,13 @@ const goDashboard = async () => {
                 >
                   <UserCheck class="w-4 h-4 mr-2" />
                   Phân Công Đơn
-                </button>
+                </NuxtLink>
               </li>
+              
+              <!-- Theo Dõi Trạng Thái -->
               <li>
-                <button
-                  @click="goToOrderList"
+                <NuxtLink
+                  to="/manager/orders"
                   :class="[
                     'px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center',
                     activeSection === 'theodoi' 
@@ -149,11 +142,13 @@ const goDashboard = async () => {
                 >
                   <Activity class="w-4 h-4 mr-2" />
                   Theo Dõi Trạng Thái
-                </button>
+                </NuxtLink>
               </li>
+              
+              <!-- Xử Lý Đột Xuất -->
               <li>
-                <button
-                  @click="goToEmergency"
+                <NuxtLink
+                  to="/manager/orders/emergency"
                   :class="[
                     'px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center',
                     activeSection === 'dotxuat' 
@@ -163,7 +158,7 @@ const goDashboard = async () => {
                 >
                   <Zap class="w-4 h-4 mr-2" />
                   Xử Lý Đột Xuất
-                </button>
+                </NuxtLink>
               </li>
             </ul>
           </nav>
@@ -235,44 +230,44 @@ const goDashboard = async () => {
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
         <h3 class="text-lg font-bold text-gray-900 mb-4">Thao tác nhanh</h3>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button
-            @click="goToOrderDetail"
-            class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-glow-primary-500 hover:bg-glow-primary-50 transition-all group cursor-pointer"
+          <NuxtLink
+            to="/manager/orders/1"
+            class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-glow-primary-500 hover:bg-glow-primary-50 transition-all group"
           >
             <div class="w-10 h-10 bg-glow-primary-100 rounded-lg flex items-center justify-center group-hover:bg-glow-primary-200 transition-colors">
               <Package class="w-5 h-5 text-glow-primary-600" />
             </div>
-            <div>
+            <div class="text-left">
               <p class="font-semibold text-gray-900">Xử lý đơn hàng</p>
               <p class="text-sm text-gray-500">Quản lý đơn hàng</p>
             </div>
-          </button>
+          </NuxtLink>
 
-          <button
-            @click="goToAssign"
-            class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-glow-primary-500 hover:bg-glow-primary-50 transition-all group cursor-pointer"
+          <NuxtLink
+            to="/manager/orders/assign"
+            class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-glow-primary-500 hover:bg-glow-primary-50 transition-all group"
           >
             <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
               <Users class="w-5 h-5 text-purple-600" />
             </div>
-            <div>
+            <div class="text-left">
               <p class="font-semibold text-gray-900">Phân công tài xế</p>
               <p class="text-sm text-gray-500">Gán đơn cho tài xế</p>
             </div>
-          </button>
+          </NuxtLink>
 
-          <button
-            @click="goToEmergency"
-            class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-red-500 hover:bg-red-50 transition-all group cursor-pointer"
+          <NuxtLink
+            to="/manager/orders/emergency"
+            class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-red-500 hover:bg-red-50 transition-all group"
           >
             <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
               <Zap class="w-5 h-5 text-red-600" />
             </div>
-            <div>
+            <div class="text-left">
               <p class="font-semibold text-gray-900">Xử lý đột xuất</p>
               <p class="text-sm text-gray-500">Đơn hàng khẩn cấp</p>
             </div>
-          </button>
+          </NuxtLink>
         </div>
       </div>
 
@@ -280,12 +275,12 @@ const goDashboard = async () => {
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-bold text-gray-900">Đơn hàng gần đây</h3>
-          <button
-            @click="goToOrderList"
-            class="text-sm text-glow-primary-600 hover:text-glow-primary-700 font-medium cursor-pointer"
+          <NuxtLink
+            to="/manager/orders"
+            class="text-sm text-glow-primary-600 hover:text-glow-primary-700 font-medium"
           >
             Xem tất cả →
-          </button>
+          </NuxtLink>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full">
@@ -311,12 +306,12 @@ const goDashboard = async () => {
                 <td class="py-3 px-4 text-sm font-semibold text-gray-900">₫250,000</td>
                 <td class="py-3 px-4 text-sm text-gray-500">19/01/2026</td>
                 <td class="py-3 px-4">
-                  <button
-                    @click="router.push('/manager/orders/1')"
-                    class="text-glow-primary-600 hover:text-glow-primary-700 text-sm font-medium cursor-pointer"
+                  <NuxtLink
+                    to="/manager/orders/1"
+                    class="text-glow-primary-600 hover:text-glow-primary-700 text-sm font-medium"
                   >
                     Chi tiết
-                  </button>
+                  </NuxtLink>
                 </td>
               </tr>
               <tr class="border-b border-gray-100 hover:bg-glow-primary-50/50 transition-colors">
@@ -330,12 +325,12 @@ const goDashboard = async () => {
                 <td class="py-3 px-4 text-sm font-semibold text-gray-900">₫180,000</td>
                 <td class="py-3 px-4 text-sm text-gray-500">19/01/2026</td>
                 <td class="py-3 px-4">
-                  <button
-                    @click="router.push('/manager/orders/2')"
-                    class="text-glow-primary-600 hover:text-glow-primary-700 text-sm font-medium cursor-pointer"
+                  <NuxtLink
+                    to="/manager/orders/2"
+                    class="text-glow-primary-600 hover:text-glow-primary-700 text-sm font-medium"
                   >
                     Chi tiết
-                  </button>
+                  </NuxtLink>
                 </td>
               </tr>
               <tr class="hover:bg-glow-primary-50/50 transition-colors">
@@ -349,12 +344,12 @@ const goDashboard = async () => {
                 <td class="py-3 px-4 text-sm font-semibold text-gray-900">₫320,000</td>
                 <td class="py-3 px-4 text-sm text-gray-500">19/01/2026</td>
                 <td class="py-3 px-4">
-                  <button
-                    @click="router.push('/manager/orders/3')"
-                    class="text-glow-primary-600 hover:text-glow-primary-700 text-sm font-medium cursor-pointer"
+                  <NuxtLink
+                    to="/manager/orders/3"
+                    class="text-glow-primary-600 hover:text-glow-primary-700 text-sm font-medium"
                   >
                     Chi tiết
-                  </button>
+                  </NuxtLink>
                 </td>
               </tr>
             </tbody>

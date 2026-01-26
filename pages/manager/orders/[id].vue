@@ -17,6 +17,11 @@ import {
   Search,
 } from 'lucide-vue-next'
 
+// Vô hiệu hóa layout mặc định
+definePageMeta({
+  layout: false
+});
+
 const route = useRoute()
 const router = useRouter()
 
@@ -259,7 +264,7 @@ const getCancelReasonText = (value: string) => {
                 class="text-xl font-bold bg-gradient-to-r from-glow-primary-600
                        to-glow-primary-500 bg-clip-text text-transparent"
               >
-                Xử lý đơn hàng
+                Trang chủ
               </h1>
             </div>
           </div>
