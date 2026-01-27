@@ -7,7 +7,7 @@ definePageMeta({
   layout: false
 });
 
-const { customer, logout } = useCustomerSession();
+const { user, logout } = useAuth();
 const route = useRoute();
 const router = useRouter();
 
@@ -54,10 +54,9 @@ const stats = ref([
   }
 ]);
 
-const handleLogout = () => {
-  logout();
-  router.push('/');
-};
+const handleLogout = async () => {
+  await logout()  // useAuth.logout() đã có router.push('/login')
+}
 </script>
 
 <template>
@@ -166,9 +165,9 @@ const handleLogout = () => {
           <!-- User Info & Logout -->
           <div class="flex items-center gap-4">
             <div class="text-right hidden sm:block">
-              <p class="text-sm font-semibold text-gray-900">{{ customer?.name }}</p>
-              <p class="text-xs text-gray-500">{{ customer?.email }}</p>
-            </div>
+            <p class="text-sm font-semibold text-gray-900">{{ user?.name }}</p>
+            <p class="text-xs text-gray-500">{{ user?.email }}</p>
+          </div>
             <button
               @click="handleLogout"
               class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-glow-primary-500 to-glow-primary-600 rounded-lg hover:shadow-lg hover:shadow-glow-primary-500/30 transition-all flex items-center gap-2"

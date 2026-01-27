@@ -11,45 +11,69 @@ export default defineNuxtRouteMiddleware(async(to, from) => {
     role: user.value?.role
   })
 
-  // Public pages
-  const publicPages = ['/login', '/register', '/forgot-password']
+  // Public pages - không cần đăng nhập
+  const publicPages = ['/login', '/forgot-password', '/customer/register']
   const isPublicPage = publicPages.includes(to.path)
 
-  // Chưa login mà vào trang protected
-  if (!isAuthenticated && !isPublicPage) {
+  // Nếu vào root '/' mà chưa login → redirect /login
+  if (to.path === '/' && !isAuthenticated) {
+    console.log('❌ Not authenticated on root, redirecting to /login')
     return navigateTo('/login')
   }
 
-  if (!user.value) {
+  // Chưa login mà vào trang protected
+  if (!isAuthenticated && !isPublicPage) {
+    console.log('❌ Not authenticated, redirecting to /login')
+    return navigateTo('/login')
+  }
+
+  if (!user.value && isAuthenticated) {
     await fetchCurrentUser()
   }
 
-  // Đã login mà vào login/register
-  if (isAuthenticated && isPublicPage) {
+  // Sau logout, user.value = null → redirect /login (nhưng cho phép /customer/register)
+  if (!user.value && !isPublicPage && !to.path.includes('/register')) {
+    console.log('❌ User cleared (logout), redirecting to /login')
+    return navigateTo('/login')
+  }
+
+  // Đã login mà vào login → redirect về dashboard (nhưng cho phép /customer/register)
+  if (isAuthenticated && (to.path === '/login' || to.path === '/forgot-password')) {
     const role = user.value?.role
     
-    // Redirect về trang tương ứng với role
-    if (role === 'admin') {
+    if (role === 'admin' || role === 'manager') {
+      console.log('✅ Admin accessing /login, redirecting to /manager/dashboard')
       return navigateTo('/manager/dashboard')
     } else if (role === 'customer') {
+      console.log('✅ Customer accessing /login, redirecting to /customer')
       return navigateTo('/customer')
     }
     
     return navigateTo('/')
   }
 
+  // Nếu chưa login, không check role
+  if (!isAuthenticated) {
+    return
+  }
+
   // ======================
-  // CHECK ROLE & REDIRECT
+  // CHECK ROLE & REDIRECT (chỉ check khi đã login)
   // ======================
 
   const role = user.value?.role
-  if (!role) return
+  if (!role) {
+    console.log('⚠️ No role found')
+    return
+  }
 
-  // ✅ THÊM: Redirect từ homepage về trang của role
-  if (to.path === '/') {
-    if (role === 'admin') {
+  // Redirect từ homepage về trang của role
+  if (to.path === '/' && isAuthenticated) {
+    if (role === 'admin' || role === 'manager') {
+      console.log('✅ Admin on /, redirecting to /manager/dashboard')
       return navigateTo('/manager/dashboard')
     } else if (role === 'customer') {
+      console.log('✅ Customer on /, redirecting to /customer')
       return navigateTo('/customer')
     }
   }
@@ -57,11 +81,13 @@ export default defineNuxtRouteMiddleware(async(to, from) => {
   // Map role → allowed routes
   const roleRouteMap: Record<string, string[]> = {
     admin: ['/manager'],
-    customer: ['/customer']  // ❌ Bỏ '/' ra khỏi customer
+    manager: ['/manager'],
+    customer: ['/customer', '/home']
   }
 
   const allowedPrefixes = roleRouteMap[role]
   if (!allowedPrefixes) {
+    console.log('❌ No allowed routes for role:', role)
     return navigateTo('/403')
   }
 
@@ -70,8 +96,8 @@ export default defineNuxtRouteMiddleware(async(to, from) => {
   )
 
   if (!isAllowed) {
-    // Redirect về trang gốc của role
-    if (role === 'admin') {
+    console.log('❌ User role not allowed to access:', to.path)
+    if (role === 'admin' || role === 'manager') {
       return navigateTo('/manager/dashboard')
     } else if (role === 'customer') {
       return navigateTo('/customer')
