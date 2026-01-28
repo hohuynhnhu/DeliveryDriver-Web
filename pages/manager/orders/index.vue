@@ -43,6 +43,15 @@ interface Task {
   status: 'pending' | 'in_progress' | 'completed'
 }
 
+interface EmergencyOrder {
+  id: number
+  customer: string
+  phone: string
+  address: string
+  status: string
+  createdAt: string
+}
+
 /* ===== ROUTER ===== */
 const router = useRouter()
 
@@ -85,6 +94,28 @@ const orders = ref<Order[]>([
   }
 ])
 
+/* ===== EMERGENCY ORDERS ===== */
+const emergencyOrders = ref<EmergencyOrder[]>([
+  {
+    id: 201,
+    customer: 'Nguyễn Văn A',
+    phone: '0909123456',
+    address: 'Quận 3, TP.HCM',
+    status: 'pending',
+    createdAt: '2026-01-21 09:00'
+  },
+  {
+    id: 202,
+    customer: 'Trần Thị B',
+    phone: '0909654321',
+    address: 'Quận 1, TP.HCM',
+    status: 'processing',
+    createdAt: '2026-01-21 10:30'
+  }
+])
+
+const selectedOrder = ref<EmergencyOrder | null>(null)
+
 /* ===== TASKS ===== */
 const tasks = ref<Task[]>([])
 
@@ -106,6 +137,13 @@ const getDriverName = (id: number | null) =>
 
 const formatPriority = (p: Priority) =>
   p === 'high' ? 'Cao' : p === 'medium' ? 'Trung bình' : 'Thấp'
+
+const statusColor = (status: string) => {
+  if (status === 'pending') return 'bg-blue-100 text-blue-700'
+  if (status === 'processing') return 'bg-yellow-100 text-yellow-700'
+  if (status === 'completed') return 'bg-green-100 text-green-700'
+  return 'bg-gray-100 text-gray-700'
+}
 
 /* ===== CREATE TASKS BY FILTER ===== */
 const createTasksByFilter = () => {
@@ -189,7 +227,7 @@ const completeTask = (task: Task) => {
                 class="text-xl font-bold bg-gradient-to-r from-glow-primary-600
                        to-glow-primary-500 bg-clip-text text-transparent"
               >
-                Theo Dõi Trạng Thái
+                Trang chủ
               </h1>
             </div>
           </div>
@@ -260,147 +298,107 @@ const completeTask = (task: Task) => {
       </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-      <!-- UNGROUPED ORDERS -->
-      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-        <h2 class="text-lg font-bold text-gray-900 mb-4">Đơn hàng chưa phân công</h2>
-        
-        <!-- FILTER -->
-        <div class="flex flex-wrap items-center gap-4 mb-6">
-          <label class="font-medium text-sm text-gray-700">Tạo công việc theo:</label>
-          <select
-            v-model="groupType"
-            class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-glow-primary-500 focus:border-transparent"
-          >
-            <option value="area">Khu vực</option>
-            <option value="priority">Mức độ ưu tiên</option>
-            <option value="time">Thời gian</option>
-          </select>
+        <!-- DANH SÁCH ĐƠN -->
+        <aside class="lg:col-span-4">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">Danh sách đơn hàng</h2>
 
-          <button
-            class="px-4 py-2 bg-gradient-to-r from-glow-primary-500 to-glow-primary-600 text-white rounded-lg font-medium hover:shadow-lg hover:shadow-glow-primary-500/30 transition-all"
-            @click="createTasksByFilter"
-          >
-            Tạo công việc
-          </button>
-        </div>
+            <div v-if="emergencyOrders.length === 0" class="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+              <Package class="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p class="text-gray-500">Không có đơn hàng</p>
+            </div>
 
-        <!-- Orders List -->
-        <div v-if="unGroupedOrders.length === 0" class="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-          <Package class="w-12 h-12 mx-auto mb-2 text-gray-300" />
-          <p class="text-gray-500">Không có đơn hàng chưa phân công</p>
-        </div>
-
-        <div v-else class="space-y-3">
-          <div
-            v-for="o in unGroupedOrders"
-            :key="o.id"
-            class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:border-glow-primary-300 transition-all"
-          >
-            <div class="flex items-start justify-between mb-2">
-              <h3 class="font-semibold text-gray-900">Đơn hàng #{{ o.id }}</h3>
-              <span
-                :class="[
-                  'px-3 py-1 rounded-full text-xs font-semibold',
-                  o.priority === 'high' ? 'bg-red-100 text-red-700' :
-                  o.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-green-100 text-green-700'
-                ]"
+            <ul v-else class="space-y-3">
+              <li
+                v-for="order in emergencyOrders"
+                :key="order.id"
+                @click="selectedOrder = order"
+                class="p-4 rounded-lg cursor-pointer border-2 transition-all hover:shadow-md"
+                :class="selectedOrder?.id === order.id 
+                  ? 'bg-glow-primary-50 border-glow-primary-400 shadow-sm' 
+                  : 'border-gray-200 hover:border-glow-primary-200'"
               >
-                {{ formatPriority(o.priority) }}
+                <div class="flex justify-between items-center mb-2">
+                  <span class="font-semibold text-gray-900">#{{ order.id }}</span>
+                  <span
+                    class="px-3 py-1 text-xs font-semibold rounded-full"
+                    :class="statusColor(order.status)"
+                  >
+                    {{ order.status }}
+                  </span>
+                </div>
+                <p class="text-sm text-gray-600 font-medium">{{ order.customer }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ order.phone }}</p>
+              </li>
+            </ul>
+          </div>
+        </aside>
+
+        <!-- CHI TIẾT ĐƠN -->
+        <section class="lg:col-span-8">
+          <div
+            v-if="selectedOrder"
+            class="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+          >
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-lg font-bold text-gray-900">
+                Chi tiết đơn hàng #{{ selectedOrder.id }}
+              </h2>
+              <span
+                class="px-3 py-1 text-sm font-semibold rounded-full"
+                :class="statusColor(selectedOrder.status)"
+              >
+                {{ selectedOrder.status }}
               </span>
             </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              <div>
-                <p class="text-xs text-gray-500">Từ</p>
-                <p class="text-gray-700">{{ o.pickupAddress }}</p>
+
+            <div class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <p class="text-xs text-gray-500 mb-1">Khách hàng</p>
+                  <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.customer }}</p>
+                </div>
+
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <p class="text-xs text-gray-500 mb-1">Số điện thoại</p>
+                  <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.phone }}</p>
+                </div>
               </div>
-              <div>
-                <p class="text-xs text-gray-500">Đến</p>
-                <p class="text-gray-700">{{ o.deliveryAddress }}</p>
+
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <p class="text-xs text-gray-500 mb-1">Địa chỉ</p>
+                <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.address }}</p>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <p class="text-xs text-gray-500 mb-1">Thời gian tạo</p>
+                  <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.createdAt }}</p>
+                </div>
+
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <p class="text-xs text-gray-500 mb-1">Thời gian giao dự kiến</p>
+                  <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.createdAt }}</p>
+                </div>
               </div>
             </div>
 
-            <div class="flex items-center justify-between mt-3 text-xs text-gray-500">
-              <span>{{ o.vehicleType }}</span>
-              <span>{{ o.pickupTime.split('T')[0] }} {{ o.pickupTime.split('T')[1] }}</span>
-            </div>
+
           </div>
-        </div>
-      </div>
 
-      <!-- TASK LIST -->
-      <div
-        v-for="task in tasks"
-        :key="task.id"
-        class="bg-white p-6 rounded-xl shadow-sm border border-gray-200"
-      >
-        <div class="flex justify-between items-start mb-4">
-          <h3 class="text-lg font-bold text-gray-900">{{ task.name }}</h3>
-          <span
-            :class="[
-              'px-3 py-1 rounded-full text-xs font-semibold',
-              task.status === 'pending' ? 'bg-blue-100 text-blue-700' :
-              task.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700' :
-              'bg-green-100 text-green-700'
-            ]"
-          >
-            {{ task.status === 'pending' ? 'Chờ xử lý' : task.status === 'in_progress' ? 'Đang thực hiện' : 'Hoàn thành' }}
-          </span>
-        </div>
-
-        <div class="mb-4 p-3 bg-gray-50 rounded-lg">
-          <p class="text-sm text-gray-700">
-            <span class="font-medium">Tài xế:</span> {{ getDriverName(task.driverId) }}
-          </p>
-        </div>
-
-        <!-- Driver Selection -->
-        <div v-if="!task.driverId" class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Chọn tài xế</label>
-          <select
-            class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-glow-primary-500 focus:border-transparent"
-            @change="assignDriverToTask(task, Number(($event.target as HTMLSelectElement).value))"
-          >
-            <option value="">-- Chọn tài xế --</option>
-            <option
-              v-for="d in availableDrivers"
-              :key="d.id"
-              :value="d.id"
-            >
-              {{ d.name }} (⭐ {{ d.rating }})
-            </option>
-          </select>
-        </div>
-
-        <!-- Task Orders -->
-        <div class="space-y-2 mb-4">
-          <h4 class="text-sm font-semibold text-gray-700">Đơn hàng trong công việc:</h4>
           <div
-            v-for="o in task.orders"
-            :key="o.id"
-            class="bg-gray-50 border border-gray-200 rounded-lg p-3"
+            v-else
+            class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center"
           >
-            <div class="flex items-center justify-between">
-              <span class="font-medium text-gray-900">#{{ o.id }}</span>
-              <span class="text-xs text-gray-500">{{ o.vehicleType }}</span>
-            </div>
-            <p class="text-sm text-gray-600 mt-1">{{ o.deliveryAddress }}</p>
+            <Package class="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <p class="text-gray-500 text-lg">Chọn một đơn hàng để xem chi tiết</p>
           </div>
-        </div>
+        </section>
 
-        <!-- Complete Button -->
-        <button
-          v-if="task.status === 'in_progress'"
-          class="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-medium hover:shadow-lg hover:shadow-green-500/30 transition-all"
-          @click="completeTask(task)"
-        >
-          Hoàn thành công việc
-        </button>
       </div>
-
     </main>
   </div>
 </template>
