@@ -5,22 +5,31 @@ definePageMeta({
   middleware: 'customer-auth'
 })
 
+const { user, fetchCurrentUser } = useAuth()
+
 const isEditing = ref(false)
 const showChangePassword = ref(false)
+const isLoading = ref(false)
 
-const profileData = ref({
-  name: 'Nguyễn Văn A',
-  email: 'nguyenvana@email.com',
-  phone: '0909 000 111',
-  address: '123 Nguyễn Văn A, P.5, Q.3, TP.HCM',
-  avatar: '👤',
-  memberSince: '15/01/2024',
-  totalOrders: 45,
+// Sử dụng computed để map dữ liệu từ API
+const profileData = computed(() => ({
+  name: user.value?.full_name || 'Chưa cập nhật',
+  email: user.value?.email || '',
+  phone: user.value?.phone || 'Chưa cập nhật',
+  address: 'Chưa cập nhật', // Nếu backend có field address thì thêm vào User interface
+  avatar: user.value?.avatar_url || '👤',
+  memberSince: user.value?.created_at ? new Date(user.value.created_at).toLocaleDateString('vi-VN') : '',
+  totalOrders: 45, // Dữ liệu này cần endpoint khác để lấy
   completedOrders: 42,
   rating: 4.8
-})
+}))
 
-const editData = ref({ ...profileData.value })
+const editData = ref({
+  name: '',
+  email: '',
+  phone: '',
+  address: ''
+})
 
 const passwordData = ref({
   currentPassword: '',
@@ -35,19 +44,43 @@ const stats = [
   { label: 'Thành viên', value: '2 năm', icon: Award, color: 'purple' }
 ]
 
+// Fetch dữ liệu khi component mount
+onMounted(async () => {
+  isLoading.value = true
+  await fetchCurrentUser()
+  isLoading.value = false
+})
+
 const handleEdit = () => {
   isEditing.value = true
-  editData.value = { ...profileData.value }
+  editData.value = {
+    name: profileData.value.name,
+    email: profileData.value.email,
+    phone: profileData.value.phone,
+    address: profileData.value.address
+  }
 }
 
-const handleSave = () => {
-  profileData.value = { ...editData.value }
-  isEditing.value = false
+const handleSave = async () => {
+  // TODO: Gọi API để update profile
+  // const api = useApi()
+  // await api.patch('/api/v1/users/me', {
+  //   full_name: editData.value.name,
+  //   phone: editData.value.phone
+  // })
+  
   alert('Cập nhật thông tin thành công!')
+  isEditing.value = false
+  await fetchCurrentUser() // Refresh data
 }
 
 const handleCancel = () => {
-  editData.value = { ...profileData.value }
+  editData.value = {
+    name: profileData.value.name,
+    email: profileData.value.email,
+    phone: profileData.value.phone,
+    address: profileData.value.address
+  }
   isEditing.value = false
 }
 
@@ -65,6 +98,7 @@ const handleChangePassword = () => {
     return
   }
   
+  // TODO: Gọi API đổi mật khẩu
   alert('Đổi mật khẩu thành công!')
   showChangePassword.value = false
   passwordData.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
@@ -83,7 +117,17 @@ const getColorClasses = (color: string) => {
 
 <template>
   <main class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+    
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex items-center justify-center min-h-screen">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+        <p class="text-gray-600">Đang tải thông tin...</p>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div v-else class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
       <!-- Header -->
       <div class="mb-8">
@@ -226,7 +270,8 @@ const getColorClasses = (color: string) => {
                   v-if="isEditing"
                   v-model="editData.email"
                   type="email"
-                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                  disabled
+                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
                 />
                 <p v-else class="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 font-medium">
                   {{ profileData.email }}

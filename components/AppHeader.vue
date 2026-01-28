@@ -223,7 +223,7 @@ function handleClickOutside(event: MouseEvent) {
               </div>
               <div class="py-2">
                 <NuxtLink 
-                  to="/admin/profile" 
+                  to="/customer/profile" 
                   class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   @click="showUserMenu = false"
                 >

@@ -17,7 +17,7 @@ const activeSection = computed(() => {
   if (path === '/manager/orders') return 'theodoi';
   if (path === '/manager/orders/assign') return 'phancong';
   if (path === '/manager/orders/emergency') return 'dotxuat';
-  if (path.match(/^\/manager\/orders\/\d+$/)) return 'xulydh';
+  // if (path.match(/^\/manager\/orders\/\d+$/)) return 'xulydh';
   if (path === '/manager/dashboard') return 'trangchu';
   return 'trangchu';
 });

@@ -30,3 +30,8 @@ export interface RegisterRequest{
 export interface ApiError{
     detail:string | {detail:string}
 }
+
+export interface ChangePasswordRequest {
+  current_password: string
+  new_password: string
+}

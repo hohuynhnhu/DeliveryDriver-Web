@@ -1,5 +1,5 @@
 import { API_ENDPOINTS, STORAGE_KEYS } from '@/utils/constants'
-import type { User, AuthResponse, LoginRequest, RegisterRequest } from '@/@type/auth'
+import type { User, AuthResponse, LoginRequest, RegisterRequest,ChangePasswordRequest } from '@/@type/auth'
 
 export const useAuth = () => {
   const api = useApi()
@@ -115,6 +115,31 @@ export const useAuth = () => {
       isLoading.value = false
     }
   }
+  const me = async (): Promise<boolean> => {
+  // Bỏ parameter data: User, chỉ cần GET
+  isLoading.value = true
+  error.value = null
+
+  try {
+    const response = await api.get<User>(
+      API_ENDPOINTS.ME,
+      true // cần auth
+    )
+
+    if (response.data) {
+      user.value = response.data
+      return true
+    }
+
+    error.value = response.error || 'Không thể lấy thông tin user'
+    return false
+  } catch (e) {
+    error.value = 'Đã xảy ra lỗi'
+    return false
+  } finally {
+    isLoading.value = false
+  }
+}
 
   /// ĐĂNG XUẤT
   const logout = async () => {
@@ -169,11 +194,11 @@ export const useAuth = () => {
   return {
     // State
     user,
-    role,  // ✅ Đã có rồi nhưng cần đảm bảo nó ở đây
+    role,  
     isLoading,
     error,
     isAuthenticated,
-
+    me,
     // Methods
     login,
     register,
