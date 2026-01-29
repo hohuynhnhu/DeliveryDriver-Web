@@ -98,7 +98,7 @@
 
 
 <script setup lang="ts">
-import MapPicker from '@/components/MapPicker.vue'
+import MapPicker from '@/components/map/MapPicker.vue'
 
 const lat = ref<number>(10.7769)
 const lng = ref<number>(106.7009)
