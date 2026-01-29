@@ -1,13 +1,54 @@
 <script setup lang="ts">
-import { Package, MapPin, ShoppingBag, User, LogOut, Bell, Settings, CreditCard, Plus } from 'lucide-vue-next';
-import { useAuth } from '~/composables/useAuth';
+import { Package, MapPin, ShoppingBag, User, LogOut, Plus, TrendingUp, Clock, CheckCircle } from 'lucide-vue-next';
+import { useAuth } from '@/composables/useAuth';
+import type { OrderResponse } from '@/@type/order';
 
 definePageMeta({
   layout: false,
-
 });
 
 const { user, logout } = useAuth();
+const { getCustomerOrders, isLoading } = useOrder();
+
+// State
+const recentOrders = ref<OrderResponse[]>([]);
+const orderStats = ref({
+  total: 0,
+  pending: 0,
+  processing: 0,
+  completed: 0,
+  cancelled: 0
+});
+
+// Load dữ liệu đơn hàng
+const loadDashboardData = async () => {
+  if (!user.value?.id) return;
+  
+  try {
+    // Lấy 10 đơn hàng gần nhất
+    const orders = await getCustomerOrders(user.value.id, 0, 10);
+    
+    if (orders && orders.length > 0) {
+      recentOrders.value = orders.slice(0, 3); // Chỉ lấy 3 đơn gần nhất để hiển thị
+      
+      // Tính toán thống kê
+      orderStats.value = {
+        total: orders.length,
+        pending: orders.filter(o => o.status === 'pending').length,
+        processing: orders.filter(o => o.status === 'processing').length,
+        completed: orders.filter(o => o.status === 'completed').length,
+        cancelled: orders.filter(o => o.status === 'cancelled').length
+      };
+    }
+  } catch (error) {
+    console.error('Error loading dashboard data:', error);
+  }
+};
+
+// Load khi component mount
+onMounted(() => {
+  loadDashboardData();
+});
 
 const handleLogout = async () => {
   await logout();
@@ -35,24 +76,94 @@ const menuItems = [
     description: 'Theo dõi đơn hàng',
     color: 'from-pink-500 to-pink-600'
   },
-  { 
-    name: 'Thanh Toán', 
-    path: '/customer/payment', 
-    icon: CreditCard,
-    description: 'Phương thức thanh toán',
-    color: 'from-green-500 to-green-600'
-  },
 ];
 
-const stats = [
-  { label: 'Đơn Hàng', value: '12', color: 'text-blue-600' },
-  { label: 'Đang Giao', value: '3', color: 'text-glow-primary-600' },
-  { label: 'Hoàn Thành', value: '9', color: 'text-green-600' },
-];
+// Stats động từ dữ liệu thật
+const stats = computed(() => [
+  { 
+    label: 'Tổng Đơn', 
+    value: orderStats.value.total.toString(), 
+    color: 'text-blue-600',
+    icon: Package,
+    bgColor: 'bg-blue-100'
+  },
+  { 
+    label: 'Đang Xử Lý', 
+    value: (orderStats.value.pending + orderStats.value.processing).toString(), 
+    color: 'text-glow-primary-600',
+    icon: Clock,
+    bgColor: 'bg-glow-primary-100'
+  },
+  { 
+    label: 'Hoàn Thành', 
+    value: orderStats.value.completed.toString(), 
+    color: 'text-green-600',
+    icon: CheckCircle,
+    bgColor: 'bg-green-100'
+  },
+]);
+
+// Format thời gian
+const formatDateTime = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 60) {
+    return `${diffMins} phút trước`;
+  } else if (diffHours < 24) {
+    return `${diffHours} giờ trước`;
+  } else if (diffDays < 7) {
+    return `${diffDays} ngày trước`;
+  } else {
+    return date.toLocaleDateString('vi-VN');
+  }
+};
+
+// Lấy status text
+const getStatusText = (status: string) => {
+  const statusMap: Record<string, string> = {
+    pending: 'Chờ xác nhận',
+    confirmed: 'Đã xác nhận',
+    processing: 'Đang xử lý',
+    completed: 'Đã hoàn thành',
+    cancelled: 'Đã huỷ'
+  };
+  return statusMap[status] || status;
+};
+
+// Lấy màu và icon cho activity
+const getActivityConfig = (status: string) => {
+  const configs: Record<string, { color: string; icon: any; text: string }> = {
+    completed: {
+      color: 'from-green-500 to-green-600',
+      icon: CheckCircle,
+      text: 'đã được giao thành công'
+    },
+    processing: {
+      color: 'from-glow-primary-500 to-glow-primary-600',
+      icon: Package,
+      text: 'đang được xử lý'
+    },
+    pending: {
+      color: 'from-yellow-500 to-yellow-600',
+      icon: Clock,
+      text: 'đang chờ xác nhận'
+    },
+    cancelled: {
+      color: 'from-red-500 to-red-600',
+      icon: ShoppingBag,
+      text: 'đã bị huỷ'
+    }
+  };
+  return configs[status] || configs.pending;
+};
 </script>
 
 <template>
-  <!-- ✅ Xóa <html>, <head>, <body> đi -->
   <div class="min-h-screen w-screen bg-gradient-to-br from-gray-50 via-white to-glow-primary-50/30 overflow-x-hidden">
     <!-- Decorative Background -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -71,20 +182,13 @@ const stats = [
               </div>
               <div>
                 <h1 class="text-3xl font-bold text-gray-900">
-                  Xin chào, {{ user?.name || 'Khách hàng' }}!
+                  Xin chào, {{ user?.full_name || 'Khách hàng' }}!
                 </h1>
                 <p class="text-gray-600">Chào mừng bạn quay trở lại DeliveryDriver</p>
               </div>
             </div>
             
             <div class="flex items-center gap-3">
-              <button class="p-3 hover:bg-gray-100 rounded-xl transition-colors relative">
-                <Bell class="w-6 h-6 text-gray-600" />
-                <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
-              <button class="p-3 hover:bg-gray-100 rounded-xl transition-colors">
-                <Settings class="w-6 h-6 text-gray-600" />
-              </button>
               <button
                 @click="handleLogout"
                 class="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium"
@@ -95,13 +199,18 @@ const stats = [
             </div>
           </div>
 
-          <!-- Stats -->
+          <!-- Stats - Dữ liệu thật -->
           <div class="grid grid-cols-3 gap-4 mt-8">
             <div 
               v-for="stat in stats" 
               :key="stat.label"
-              class="text-center p-4 bg-gray-50 rounded-xl"
+              class="group text-center p-6 bg-gray-50 hover:bg-gradient-to-br hover:from-white hover:to-gray-50 rounded-xl border border-gray-100 hover:border-glow-primary-200 transition-all duration-300 cursor-default"
             >
+              <div class="flex items-center justify-center mb-3">
+                <div :class="['w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110', stat.bgColor]">
+                  <component :is="stat.icon" class="w-6 h-6" :class="stat.color" />
+                </div>
+              </div>
               <div class="text-3xl font-bold mb-1" :class="stat.color">{{ stat.value }}</div>
               <div class="text-sm text-gray-600">{{ stat.label }}</div>
             </div>
@@ -111,7 +220,7 @@ const stats = [
         <!-- Create Order Button -->
         <div class="mb-8">
           <NuxtLink 
-            to="/customer/createOrder"
+            to="/customer/orders_create/createOrder"
             class="group relative bg-gradient-to-r from-glow-primary-500 to-glow-primary-600 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden block"
           >
             <!-- Animated Background -->
@@ -140,7 +249,7 @@ const stats = [
 
         <!-- Quick Actions -->
         <h2 class="text-2xl font-bold text-gray-900 mb-6">Truy Cập Nhanh</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           <NuxtLink
             v-for="item in menuItems"
             :key="item.path"
@@ -176,54 +285,76 @@ const stats = [
           </NuxtLink>
         </div>
 
-        <!-- Recent Activity -->
+        <!-- Recent Activity - Dữ liệu thật -->
         <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-          <h2 class="text-2xl font-bold text-gray-900 mb-6">Hoạt Động Gần Đây</h2>
-          <div class="space-y-4">
-            <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-              <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
-                <ShoppingBag class="w-6 h-6 text-white" />
-              </div>
-              <div class="flex-1">
-                <h4 class="font-semibold text-gray-900">Đơn hàng #12345 đã được giao</h4>
-                <p class="text-sm text-gray-600">2 giờ trước</p>
-              </div>
-            </div>
-            
-            <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-              <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                <MapPin class="w-6 h-6 text-white" />
-              </div>
-              <div class="flex-1">
-                <h4 class="font-semibold text-gray-900">Đã thêm địa chỉ mới</h4>
-                <p class="text-sm text-gray-600">1 ngày trước</p>
-              </div>
-            </div>
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-gray-900">Hoạt Động Gần Đây</h2>
+            <NuxtLink 
+              to="/customer/orders"
+              class="text-sm text-glow-primary-600 hover:text-glow-primary-700 font-medium flex items-center gap-1"
+            >
+              Xem tất cả
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </NuxtLink>
+          </div>
 
-            <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-              <div class="w-12 h-12 bg-gradient-to-br from-glow-primary-500 to-glow-primary-600 rounded-xl flex items-center justify-center">
-                <Package class="w-6 h-6 text-white" />
+          <!-- Loading State -->
+          <div v-if="isLoading" class="flex justify-center items-center py-12">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-glow-primary-600"></div>
+          </div>
+
+          <!-- Recent Orders -->
+          <div v-else-if="recentOrders.length > 0" class="space-y-4">
+            <NuxtLink
+              v-for="order in recentOrders"
+              :key="order.id"
+              :to="`/customer/orders/${order.id}`"
+              class="group flex items-center gap-4 p-4 bg-gray-50 hover:bg-gradient-to-r hover:from-glow-primary-50 hover:to-purple-50 rounded-xl transition-all duration-300 border border-transparent hover:border-glow-primary-200"
+            >
+              <div 
+                class="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br shadow-sm group-hover:shadow-md transition-shadow"
+                :class="getActivityConfig(order.status).color"
+              >
+                <component :is="getActivityConfig(order.status).icon" class="w-6 h-6 text-white" />
               </div>
-              <div class="flex-1">
-                <h4 class="font-semibold text-gray-900">Đơn hàng #12344 đang được giao</h4>
-                <p class="text-sm text-gray-600">3 ngày trước</p>
+              <div class="flex-1 min-w-0">
+                <h4 class="font-semibold text-gray-900 group-hover:text-glow-primary-600 transition-colors truncate">
+                  Đơn hàng #{{ order.id }} {{ getActivityConfig(order.status).text }}
+                </h4>
+                <div class="flex items-center gap-3 mt-1">
+                  <p class="text-sm text-gray-600">{{ formatDateTime(order.created_at) }}</p>
+                  <span class="text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-700">
+                    {{ getStatusText(order.status) }}
+                  </span>
+                </div>
               </div>
+              <div class="text-gray-400 group-hover:text-glow-primary-500 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </NuxtLink>
+          </div>
+
+          <!-- Empty State -->
+          <div v-else class="text-center py-12">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Package class="w-8 h-8 text-gray-400" />
             </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Chưa có hoạt động nào</h3>
+            <p class="text-gray-600 mb-6">Bắt đầu tạo đơn hàng đầu tiên của bạn</p>
+            <NuxtLink
+              to="/customer/orders_create/createOrder"
+              class="inline-flex items-center gap-2 px-6 py-3 bg-glow-primary-600 text-white rounded-xl hover:bg-glow-primary-700 transition-colors font-medium shadow-lg shadow-glow-primary-500/30"
+            >
+              <Plus class="w-5 h-5" />
+              Tạo đơn hàng
+            </NuxtLink>
           </div>
         </div>
-
-        <!-- Back to Home -->
-        <div class="mt-8 text-center">
-          <NuxtLink 
-            to="/" 
-            class="text-gray-600 hover:text-gray-900 transition-colors inline-flex items-center gap-2"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Quay về trang chủ
-          </NuxtLink>
-        </div>
+        
       </div>
     </div>
   </div>

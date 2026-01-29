@@ -102,9 +102,7 @@ const handleLogout = async () => {
                   to="/manager/orders/1"
                   :class="[
                     'px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center',
-                    activeSection === 'xulydh' 
-                      ? 'bg-glow-primary-500 text-white shadow-lg shadow-glow-primary-500/30' 
-                      : 'text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600'
+                    'text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600'
                   ]"
                 >
                   <Package class="w-4 h-4 mr-2" />
@@ -165,7 +163,7 @@ const handleLogout = async () => {
           <!-- User Info & Logout -->
           <div class="flex items-center gap-4">
             <div class="text-right hidden sm:block">
-            <p class="text-sm font-semibold text-gray-900">{{ user?.name }}</p>
+            <p class="text-sm font-semibold text-gray-900">{{ user?.full_name }}</p>
             <p class="text-xs text-gray-500">{{ user?.email }}</p>
           </div>
             <button

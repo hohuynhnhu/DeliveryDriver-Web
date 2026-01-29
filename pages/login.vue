@@ -28,7 +28,7 @@ const handleLogin = async () => {
   if (success) {
     clearError()
     
-    if (user.value?.role === 'admin' || user.value?.role === 'manager') {
+    if (user.value?.role === 'admin') {
       await router.push('/manager/dashboard')
     } else {
       await router.push('/customer')
