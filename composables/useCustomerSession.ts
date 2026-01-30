@@ -18,7 +18,7 @@ export const useCustomerSession = () => {
       localStorage.setItem('customer_user', JSON.stringify(userData))
     }
     
-    console.log('✅ Logged in:', user.value)
+    console.log(' Logged in:', user.value)
   }
 
   const logout = async () => {
