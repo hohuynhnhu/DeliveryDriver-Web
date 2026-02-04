@@ -1,337 +1,280 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft, Package, Home, UserCheck, Activity, Zap, LogOut } from 'lucide-vue-next'
+import { Package, Zap,  RefreshCw, AlertCircle } from 'lucide-vue-next'
+import type { OrderSummary } from '@/@type/order'
 
-// Vô hiệu hóa layout mặc định
 definePageMeta({
-  layout: false
-});
+  layout: 'manager'
+})
 
-/* ===== INTERFACES ===== */
-interface Driver {
-  id: number
-  name: string
-  rating: number
-  available: boolean
-}
-
-type Priority = 'high' | 'medium' | 'low'
-type GroupType = 'area' | 'priority' | 'time'
-
-interface Order {
-  id: number
-  sender: string
-  senderPhone: string
-  receiver: string
-  receiverPhone: string
-  pickupAddress: string
-  deliveryAddress: string
-  vehicleType: string
-
-  area: string
-  priority: Priority
-  pickupTime: string        // ISO time
-  taskId: number | null
-}
-
-interface Task {
-  id: number
-  name: string
-  driverId: number | null
-  orders: Order[]
-  status: 'pending' | 'in_progress' | 'completed'
-}
-
-interface EmergencyOrder {
-  id: number
-  customer: string
-  phone: string
-  address: string
-  status: string
-  createdAt: string
-}
-
-/* ===== ROUTER ===== */
+/* ===== COMPOSABLES ===== */
 const router = useRouter()
+const { fetchPostOfficeOrders, isLoading, error } = useOrder()
+const { user, postOfficeId } = useAuth()
 
-/* ===== DRIVERS ===== */
-const drivers = ref<Driver[]>([
-  { id: 1, name: 'Nguyễn Văn Driver A', rating: 4.8, available: true },
-  { id: 2, name: 'Trần Văn Driver B', rating: 4.4, available: true },
-  { id: 3, name: 'Lê Văn Driver C', rating: 4.0, available: false }
-])
-
-/* ===== ORDERS ===== */
-const orders = ref<Order[]>([
-  {
-    id: 101,
-    sender: 'Nguyễn Văn A',
-    senderPhone: '0909123456',
-    receiver: 'Trần Văn B',
-    receiverPhone: '0909988776',
-    pickupAddress: 'Quận 3, TP.HCM',
-    deliveryAddress: 'Quận 1, TP.HCM',
-    vehicleType: 'Xe máy',
-    area: 'Trung tâm',
-    priority: 'high',
-    pickupTime: '2026-01-21T09:00',
-    taskId: null
-  },
-  {
-    id: 102,
-    sender: 'Lê Thị C',
-    senderPhone: '0909777666',
-    receiver: 'Phạm Văn D',
-    receiverPhone: '0909333444',
-    pickupAddress: 'Quận 10, TP.HCM',
-    deliveryAddress: 'Quận 7, TP.HCM',
-    vehicleType: 'Xe tải',
-    area: 'Ngoại thành',
-    priority: 'medium',
-    pickupTime: '2026-01-21T14:00',
-    taskId: null
-  }
-])
-
-/* ===== EMERGENCY ORDERS ===== */
-const emergencyOrders = ref<EmergencyOrder[]>([
-  {
-    id: 201,
-    customer: 'Nguyễn Văn A',
-    phone: '0909123456',
-    address: 'Quận 3, TP.HCM',
-    status: 'pending',
-    createdAt: '2026-01-21 09:00'
-  },
-  {
-    id: 202,
-    customer: 'Trần Thị B',
-    phone: '0909654321',
-    address: 'Quận 1, TP.HCM',
-    status: 'processing',
-    createdAt: '2026-01-21 10:30'
-  }
-])
-
-const selectedOrder = ref<EmergencyOrder | null>(null)
-
-/* ===== TASKS ===== */
-const tasks = ref<Task[]>([])
-
-/* ===== FILTER STATE ===== */
-const groupType = ref<GroupType>('area')
+/* ===== STATE ===== */
+const emergencyOrders = ref<OrderSummary[]>([])
+const selectedOrder = ref<OrderSummary | null>(null)
 
 /* ===== COMPUTED ===== */
-const unGroupedOrders = computed(() =>
-  orders.value.filter(o => !o.taskId)
-)
+const statusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    pending: 'Chờ xử lý',
+    confirmed: 'Đã xác nhận',
+    processing: 'Đang xử lý',
+    completed: 'Hoàn thành',
+    cancelled: 'Đã hủy'
+  }
+  return labels[status] || status
+}
 
-const availableDrivers = computed(() =>
-  drivers.value.filter(d => d.available)
-)
-
-/* ===== HELPERS ===== */
-const getDriverName = (id: number | null) =>
-  drivers.value.find(d => d.id === id)?.name || '-'
-
-const formatPriority = (p: Priority) =>
-  p === 'high' ? 'Cao' : p === 'medium' ? 'Trung bình' : 'Thấp'
+const pickupStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    pending: 'Chờ lấy hàng',
+    scheduled: 'Đã lên lịch',
+    picked: 'Đã lấy hàng',
+    failed: 'Thất bại'
+  }
+  return labels[status] || status
+}
 
 const statusColor = (status: string) => {
-  if (status === 'pending') return 'bg-blue-100 text-blue-700'
-  if (status === 'processing') return 'bg-yellow-100 text-yellow-700'
-  if (status === 'completed') return 'bg-green-100 text-green-700'
-  return 'bg-gray-100 text-gray-700'
+  const colors: Record<string, string> = {
+    pending: 'bg-yellow-100 text-yellow-700',
+    confirmed: 'bg-blue-100 text-blue-700',
+    processing: 'bg-purple-100 text-purple-700',
+    completed: 'bg-green-100 text-green-700',
+    cancelled: 'bg-red-100 text-red-700'
+  }
+  return colors[status] || 'bg-gray-100 text-gray-700'
 }
 
-/* ===== CREATE TASKS BY FILTER ===== */
-const createTasksByFilter = () => {
-  const map: Record<string, Order[]> = {}
+const pickupStatusColor = (status: string) => {
+  const colors: Record<string, string> = {
+    pending: 'bg-yellow-100 text-yellow-700',
+    scheduled: 'bg-blue-100 text-blue-700',
+    picked: 'bg-green-100 text-green-700',
+    failed: 'bg-red-100 text-red-700'
+  }
+  return colors[status] || 'bg-gray-100 text-gray-700'
+}
 
-  unGroupedOrders.value.forEach(order => {
-    let key = ''
-
-    if (groupType.value === 'area') key = order.area
-    if (groupType.value === 'priority') key = order.priority
-    if (groupType.value === 'time') key = order.pickupTime.split('T')[0]
-
-    if (!map[key]) map[key] = []
-    map[key].push(order)
-  })
-
-  Object.keys(map).forEach(key => {
-    const taskId = Date.now() + Math.random()
-
-    const task: Task = {
-      id: taskId,
-      name:
-        groupType.value === 'area'
-          ? `Công việc khu vực ${key}`
-          : groupType.value === 'priority'
-          ? `Công việc ưu tiên ${formatPriority(key as Priority)}`
-          : `Công việc ngày ${key}`,
-      driverId: null,
-      orders: map[key],
-      status: 'pending'
-    }
-
-    map[key].forEach(o => (o.taskId = taskId))
-    tasks.value.push(task)
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr)
+  return date.toLocaleString('vi-VN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
   })
 }
 
-/* ===== ASSIGN DRIVER TO TASK ===== */
-const assignDriverToTask = (task: Task, driverId: number) => {
-  const driver = drivers.value.find(d => d.id === driverId)
-  if (!driver || !driver.available) return
-
-  task.driverId = driver.id
-  task.status = 'in_progress'
-  driver.available = false
+// Tính thời gian đã trôi qua
+const getTimeAgo = (dateStr: string) => {
+  const now = new Date()
+  const created = new Date(dateStr)
+  const diffMs = now.getTime() - created.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMins / 60)
+  
+  if (diffMins < 60) return `${diffMins} phút trước`
+  if (diffHours < 24) return `${diffHours} giờ trước`
+  return `${Math.floor(diffHours / 24)} ngày trước`
 }
 
-/* ===== COMPLETE TASK ===== */
-const completeTask = (task: Task) => {
-  task.status = 'completed'
-  const driver = drivers.value.find(d => d.id === task.driverId)
-  if (driver) driver.available = true
+// Check xem có phải đơn khẩn cấp không (tạo từ hơn 2 giờ mà vẫn pending)
+const isUrgent = (order: OrderSummary) => {
+  if (order.status !== 'pending') return false
+  
+  const now = new Date()
+  const created = new Date(order.created_at)
+  const diffHours = (now.getTime() - created.getTime()) / (1000 * 60 * 60)
+  
+  return diffHours > 2 // Quá 2 giờ chưa xử lý
 }
+
+/* ===== METHODS ===== */
+const loadEmergencyOrders = async () => {
+  if (!postOfficeId.value) {
+    error.value = 'Bạn chưa được gán bưu cục'
+    return
+  }
+
+  // Lấy các đơn pending hoặc confirmed (cần xử lý khẩn)
+  const pendingOrders = await fetchPostOfficeOrders({ 
+    status: 'pending',
+    limit: 50 
+  })
+  
+  const confirmedOrders = await fetchPostOfficeOrders({ 
+    status: 'confirmed',
+    pickup_status: 'pending',
+    limit: 50 
+  })
+  
+  // Merge và sort theo thời gian tạo (mới nhất trước)
+  emergencyOrders.value = [
+    ...(pendingOrders || []),
+    ...(confirmedOrders || [])
+  ].sort((a, b) => {
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
+  
+  // Auto-select đơn đầu tiên
+  if (emergencyOrders.value.length > 0 && !selectedOrder.value) {
+    selectedOrder.value = emergencyOrders.value[0]
+  }
+}
+
+
+const handleOrder = async (order: OrderSummary) => {
+  // TODO: Implement xử lý đơn - chuyển sang màn hình chi tiết hoặc mở modal
+  router.push(`/manager/orders/${order.id}`)
+}
+
+/* ===== LIFECYCLE ===== */
+onMounted(() => {
+  loadEmergencyOrders()
+})
 </script>
 
 <template>
   <div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-glow-primary-50/30">
-
-    <!-- HEADER -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-      <div class="px-6">
-        <div class="flex justify-between items-center h-16">
-          <!-- LEFT -->
-          <div class="flex items-center gap-3">
-            <button
-              @click="router.push('/manager/dashboard')"
-              class="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 transition"
-            >
-              <ArrowLeft class="w-5 h-5 text-gray-600" />
-            </button>
-
-            <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 bg-gradient-to-br from-glow-primary-500 to-glow-primary-600
-                       rounded-xl flex items-center justify-center shadow-lg
-                       shadow-glow-primary-500/30"
-              >
-                <Activity class="w-6 h-6 text-white" />
-              </div>
-              <h1
-                class="text-xl font-bold bg-gradient-to-r from-glow-primary-600
-                       to-glow-primary-500 bg-clip-text text-transparent"
-              >
-                Trang chủ
-              </h1>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      
+      <!-- STATS BAR -->
+      <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500">Tổng đơn cần xử lý</p>
+              <p class="text-2xl font-bold text-gray-900 mt-1">{{ emergencyOrders.length }}</p>
+            </div>
+            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <AlertCircle class="w-6 h-6 text-yellow-600" />
             </div>
           </div>
+        </div>
 
-          <!-- NAV -->
-          <nav class="hidden md:block">
-            <ul class="flex items-center gap-1">
-              <li>
-                <button
-                  @click="router.push('/manager/dashboard')"
-                  class="px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600"
-                >
-                  <Home class="w-4 h-4 mr-2" />
-                  Trang Chủ
-                </button>
-              </li>
-              <li>
-                <button
-                  @click="router.push('/manager/orders/1')"
-                  class="px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600"
-                >
-                  <Package class="w-4 h-4 mr-2" />
-                  Xử lý đơn hàng
-                </button>
-              </li>
-              <li>
-                <button
-                  @click="router.push('/manager/orders/assign')"
-                  class="px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600"
-                >
-                  <UserCheck class="w-4 h-4 mr-2" />
-                  Phân Công Đơn
-                </button>
-              </li>
-              <li>
-                <button
-                  class="px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center bg-glow-primary-500 text-white shadow-lg shadow-glow-primary-500/30"
-                >
-                  <Activity class="w-4 h-4 mr-2" />
-                  Theo Dõi Trạng Thái
-                </button>
-              </li>
-              <li>
-                <button
-                  @click="router.push('/manager/orders/emergency')"
-                  class="px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600"
-                >
-                  <Zap class="w-4 h-4 mr-2" />
-                  Xử Lý Đột Xuất
-                </button>
-              </li>
-            </ul>
-          </nav>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500">Đơn khẩn cấp (>2h)</p>
+              <p class="text-2xl font-bold text-red-600 mt-1">
+                {{ emergencyOrders.filter(o => isUrgent(o)).length }}
+              </p>
+            </div>
+            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+              <Zap class="w-6 h-6 text-red-600" />
+            </div>
+          </div>
+        </div>
 
-          <!-- USER -->
-          <div class="flex items-center gap-4">
-            <button
-              class="px-4 py-2 text-sm font-medium text-white
-                     bg-gradient-to-r from-glow-primary-500 to-glow-primary-600
-                     rounded-lg hover:shadow-lg hover:shadow-glow-primary-500/30
-                     transition-all flex items-center gap-2"
-            >
-              <LogOut class="w-4 h-4" />
-              <span class="hidden sm:inline">Đăng xuất</span>
-            </button>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500">Chờ lấy hàng</p>
+              <p class="text-2xl font-bold text-blue-600 mt-1">
+                {{ emergencyOrders.filter(o => o.pickup_status === 'pending').length }}
+              </p>
+            </div>
+            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Package class="w-6 h-6 text-blue-600" />
+            </div>
           </div>
         </div>
       </div>
-    </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- ERROR MESSAGE -->
+      <div v-if="error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+        <AlertCircle class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+        <p class="text-sm text-red-700">{{ error }}</p>
+      </div>
+
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         <!-- DANH SÁCH ĐƠN -->
         <aside class="lg:col-span-4">
           <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 class="text-lg font-bold text-gray-900 mb-4">Danh sách đơn hàng</h2>
-
-            <div v-if="emergencyOrders.length === 0" class="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-              <Package class="w-12 h-12 mx-auto mb-2 text-gray-300" />
-              <p class="text-gray-500">Không có đơn hàng</p>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-bold text-gray-900">
+                Đơn hàng khẩn cấp
+                <span class="ml-2 text-sm font-normal text-gray-500">({{ emergencyOrders.length }})</span>
+              </h2>
             </div>
 
-            <ul v-else class="space-y-3">
+            <!-- LOADING -->
+            <div v-if="isLoading" class="text-center py-8">
+              <RefreshCw class="w-8 h-8 mx-auto mb-2 text-glow-primary-500 animate-spin" />
+              <p class="text-gray-500">Đang tải...</p>
+            </div>
+
+            <!-- EMPTY STATE -->
+            <div v-else-if="emergencyOrders.length === 0" class="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+              <Package class="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p class="text-gray-500">Không có đơn hàng cần xử lý khẩn</p>
+            </div>
+
+            <!-- ORDERS LIST -->
+            <ul v-else class="space-y-3 max-h-[600px] overflow-y-auto">
               <li
                 v-for="order in emergencyOrders"
                 :key="order.id"
                 @click="selectedOrder = order"
-                class="p-4 rounded-lg cursor-pointer border-2 transition-all hover:shadow-md"
-                :class="selectedOrder?.id === order.id 
-                  ? 'bg-glow-primary-50 border-glow-primary-400 shadow-sm' 
-                  : 'border-gray-200 hover:border-glow-primary-200'"
+                class="p-4 rounded-lg cursor-pointer border-2 transition-all hover:shadow-md relative"
+                :class="[
+                  selectedOrder?.id === order.id 
+                    ? 'bg-glow-primary-50 border-glow-primary-400 shadow-sm' 
+                    : 'border-gray-200 hover:border-glow-primary-200',
+                  isUrgent(order) ? 'ring-2 ring-red-400 ring-offset-2' : ''
+                ]"
               >
-                <div class="flex justify-between items-center mb-2">
-                  <span class="font-semibold text-gray-900">#{{ order.id }}</span>
+                <!-- URGENT BADGE -->
+                <div v-if="isUrgent(order)" class="absolute -top-2 -right-2">
+                  <div class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg flex items-center gap-1">
+                    <Zap class="w-3 h-3" />
+                    KHẨN
+                  </div>
+                </div>
+
+                <div class="flex justify-between items-start mb-2">
+                  <span class="font-semibold text-gray-900 text-xs">
+                    #{{ order.id.substring(0, 8) }}...
+                  </span>
                   <span
-                    class="px-3 py-1 text-xs font-semibold rounded-full"
+                    class="px-2 py-0.5 text-xs font-semibold rounded-full"
                     :class="statusColor(order.status)"
                   >
-                    {{ order.status }}
+                    {{ statusLabel(order.status) }}
                   </span>
                 </div>
-                <p class="text-sm text-gray-600 font-medium">{{ order.customer }}</p>
-                <p class="text-xs text-gray-500 mt-1">{{ order.phone }}</p>
+                
+                <p class="text-sm text-gray-700 mb-2 line-clamp-2">
+                 {{ order.pickup_point }}
+                </p>
+                
+                <div class="flex items-center justify-between text-xs">
+                  <span
+                    class="px-2 py-0.5 rounded-full"
+                    :class="pickupStatusColor(order.pickup_status)"
+                  >
+                    {{ pickupStatusLabel(order.pickup_status) }}
+                  </span>
+                  <span class="text-gray-500">
+                    {{ order.total_packages }} kiện
+                  </span>
+                </div>
+                
+                <div class="flex items-center justify-between mt-2">
+                  <p class="text-xs text-gray-400">
+                    {{ formatDate(order.created_at) }}
+                  </p>
+                  <p class="text-xs font-medium" :class="isUrgent(order) ? 'text-red-600' : 'text-gray-500'">
+                    {{ getTimeAgo(order.created_at) }}
+                  </p>
+                </div>
               </li>
             </ul>
           </div>
@@ -344,49 +287,78 @@ const completeTask = (task: Task) => {
             class="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
           >
             <div class="flex items-center justify-between mb-6">
-              <h2 class="text-lg font-bold text-gray-900">
-                Chi tiết đơn hàng #{{ selectedOrder.id }}
+              <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                Chi tiết đơn hàng
+                <Zap v-if="isUrgent(selectedOrder)" class="w-5 h-5 text-red-500 animate-pulse" />
               </h2>
-              <span
-                class="px-3 py-1 text-sm font-semibold rounded-full"
-                :class="statusColor(selectedOrder.status)"
-              >
-                {{ selectedOrder.status }}
-              </span>
+              <div class="flex gap-2">
+                <span
+                  class="px-3 py-1 text-sm font-semibold rounded-full"
+                  :class="statusColor(selectedOrder.status)"
+                >
+                  {{ statusLabel(selectedOrder.status) }}
+                </span>
+                <span
+                  class="px-3 py-1 text-sm font-semibold rounded-full"
+                  :class="pickupStatusColor(selectedOrder.pickup_status)"
+                >
+                  {{ pickupStatusLabel(selectedOrder.pickup_status) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- URGENT WARNING -->
+            <div v-if="isUrgent(selectedOrder)" class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+              <div class="flex items-start gap-3">
+                <AlertCircle class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p class="text-sm font-semibold text-red-800">Đơn hàng khẩn cấp</p>
+                  <p class="text-xs text-red-600 mt-1">
+                    Đơn này đã tồn tại {{ getTimeAgo(selectedOrder.created_at) }} mà chưa được xử lý. Vui lòng ưu tiên!
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div class="space-y-4">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <p class="text-xs text-gray-500 mb-1">Khách hàng</p>
-                  <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.customer }}</p>
-                </div>
-
-                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <p class="text-xs text-gray-500 mb-1">Số điện thoại</p>
-                  <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.phone }}</p>
-                </div>
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <p class="text-xs text-gray-500 mb-1">ID đơn hàng</p>
+                <p class="text-sm font-mono font-semibold text-gray-900">{{ selectedOrder.id }}</p>
               </div>
 
               <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <p class="text-xs text-gray-500 mb-1">Địa chỉ</p>
-                <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.address }}</p>
+                <p class="text-xs text-gray-500 mb-1">Địa chỉ lấy hàng</p>
+                <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.pickup_point }}</p>
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <p class="text-xs text-gray-500 mb-1">Thời gian tạo</p>
-                  <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.createdAt }}</p>
+                  <p class="text-sm font-semibold text-gray-900">{{ formatDate(selectedOrder.created_at) }}</p>
+                  <p class="text-xs text-gray-500 mt-1">{{ getTimeAgo(selectedOrder.created_at) }}</p>
                 </div>
 
                 <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <p class="text-xs text-gray-500 mb-1">Thời gian giao dự kiến</p>
-                  <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.createdAt }}</p>
+                  <p class="text-xs text-gray-500 mb-1">Tổng số kiện</p>
+                  <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.total_packages }} kiện</p>
                 </div>
               </div>
+
+              <!-- ACTION BUTTONS -->
+              <div class="pt-4 border-t border-gray-200 flex gap-3">
+                <button
+                  @click="handleOrder(selectedOrder)"
+                  class="flex-1 px-4 py-3 bg-gradient-to-r from-glow-primary-500 to-glow-primary-600 text-white rounded-lg font-medium hover:shadow-lg hover:shadow-glow-primary-500/30 transition-all"
+                >
+                  Xử lý ngay
+                </button>
+                <button
+                  class="px-4 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all"
+                >
+                  Xem chi tiết
+                </button>
+              </div>
             </div>
-
-
           </div>
 
           <div

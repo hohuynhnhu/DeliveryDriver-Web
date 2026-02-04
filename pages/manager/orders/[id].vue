@@ -2,28 +2,18 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  ArrowLeft,
   Check,
   X,
   Edit2,
-  Trash2,
   Package,
-  Home,
-  UserCheck,
-  Activity,
-  Zap,
-  LogOut,
   Clock,
   Search,
 } from 'lucide-vue-next'
 
-// Vô hiệu hóa layout mặc định
 definePageMeta({
-  layout: false
+  layout: 'manager'
 });
 
-const route = useRoute()
-const router = useRouter()
 
 type OrderStatus =
   | 'Pending'
@@ -238,99 +228,7 @@ const getCancelReasonText = (value: string) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-glow-primary-50/30">
-    <!-- HEADER-->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-      <div class="px-6">
-        <div class="flex justify-between items-center h-16">
-          <!-- LEFT -->
-          <div class="flex items-center gap-3">
-            <button
-              @click="router.push('/manager/dashboard')"
-              class="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 transition"
-            >
-              <ArrowLeft class="w-5 h-5 text-gray-600" />
-            </button>
-
-            <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 bg-gradient-to-br from-glow-primary-500 to-glow-primary-600
-                       rounded-xl flex items-center justify-center shadow-lg
-                       shadow-glow-primary-500/30"
-              >
-                <Package class="w-6 h-6 text-white" />
-              </div>
-              <h1
-                class="text-xl font-bold bg-gradient-to-r from-glow-primary-600
-                       to-glow-primary-500 bg-clip-text text-transparent"
-              >
-                Trang chủ
-              </h1>
-            </div>
-          </div>
-
-          <!-- NAV -->
-          <nav class="hidden md:block">
-            <ul class="flex items-center gap-1">
-              <li>
-                <button
-                  class="px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600"
-                >
-                  <Home class="w-4 h-4 mr-2" />
-                  Trang Chủ
-                </button>
-              </li>
-              <li>
-                <button
-                  class="px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center bg-glow-primary-500 text-white shadow-lg shadow-glow-primary-500/30"
-                >
-                  <Package class="w-4 h-4 mr-2" />
-                  Xử lý đơn hàng
-                </button>
-              </li>
-              <li>
-                <button
-                  class="px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600"
-                >
-                  <UserCheck class="w-4 h-4 mr-2" />
-                  Phân Công Đơn
-                </button>
-              </li>
-              <li>
-                <button
-                  class="px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600"
-                >
-                  <Activity class="w-4 h-4 mr-2" />
-                  Theo Dõi Trạng Thái
-                </button>
-              </li>
-              <li>
-                <button
-                  class="px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600"
-                >
-                  <Zap class="w-4 h-4 mr-2" />
-                  Xử Lý Đột Xuất
-                </button>
-              </li>
-            </ul>
-          </nav>
-
-          <!-- USER -->
-          <div class="flex items-center gap-4">
-            <button
-              class="px-4 py-2 text-sm font-medium text-white
-                     bg-gradient-to-r from-glow-primary-500 to-glow-primary-600
-                     rounded-lg hover:shadow-lg hover:shadow-glow-primary-500/30
-                     transition-all flex items-center gap-2"
-            >
-              <LogOut class="w-4 h-4" />
-              <span class="hidden sm:inline">Đăng xuất</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
-
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-glow-primary-50/30">  
     <!-- MAIN -->
     <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 

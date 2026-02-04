@@ -20,6 +20,13 @@ export const useApi = () => {
     return null
   }
 
+  const getPostId=():string | null=>{
+    if (import.meta.client){
+      return localStorage.getItem(STORAGE_KEYS.POST_OFFICE_ID)
+    }
+    return null
+  }
+
   /// Tạo headers
   const createHeaders = (requireAuth: boolean = true): HeadersInit => {
     const headers: HeadersInit = {
@@ -83,24 +90,11 @@ export const useApi = () => {
 ): Promise<ApiResponse<T>> => {
   try {
     const url = `${baseUrl}${endpoint}`
-
-    //  LOG ĐỂ DEBUG
-    console.log('========== API DEBUG ==========')
-    console.log(' Base URL:', baseUrl)
-    console.log(' Endpoint:', endpoint)
-    console.log(' Full URL:', url)
-    console.log(' Body:', body)
-    console.log('================================')
-
     const response = await fetch(url, {
       method: 'POST',
       headers: createHeaders(requireAuth),
       body: JSON.stringify(body),
     })
-
-    //  LOG RESPONSE
-    console.log(' Status:', response.status)
-    console.log(' Content-Type:', response.headers.get('content-type'))
 
     // Check content type trước khi parse JSON
     const contentType = response.headers.get('content-type')
@@ -183,5 +177,6 @@ export const useApi = () => {
     patch,
     del,
     getToken,
+    getPostId
   }
 }
