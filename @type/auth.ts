@@ -5,7 +5,7 @@ export interface GeoPoint {
 
 export interface User {
   id: string
-  role: 'admin' | 'customer' | 'driver' | 'dispatcher'
+  role: 'admin' | 'customer' | 'driver'
   email: string
   full_name: string | null
   phone: string | null
@@ -17,6 +17,7 @@ export interface User {
   created_at: string | null
   updated_at: string | null
   fcm_token: string | null
+  post_office_id:string | null
 }
 
 export interface AuthResponse {

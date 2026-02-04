@@ -4,23 +4,12 @@ import { Package, Users, AlertCircle, LogOut, UserCheck, Activity, Home, Zap, Sh
 
 // Vô hiệu hóa layout mặc định
 definePageMeta({
-  layout: false
+  layout:'manager'
 });
 
 const { user, logout } = useAuth();
 const route = useRoute();
-const router = useRouter();
 
-// Determine active section based on current route
-const activeSection = computed(() => {
-  const path = route.path;
-  if (path === '/manager/orders') return 'theodoi';
-  if (path === '/manager/orders/assign') return 'phancong';
-  if (path === '/manager/orders/emergency') return 'dotxuat';
-  // if (path.match(/^\/manager\/orders\/\d+$/)) return 'xulydh';
-  if (path === '/manager/dashboard') return 'trangchu';
-  return 'trangchu';
-});
 
 // Mock data
 const stats = ref([
@@ -54,130 +43,11 @@ const stats = ref([
   }
 ]);
 
-const handleLogout = async () => {
-  await logout()  // useAuth.logout() đã có router.push('/login')
-}
+
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-glow-primary-50/30">
-    <!-- Header với Navigation -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-      <div class="px-6">
-        <div class="flex justify-between items-center h-16">
-          <!-- Logo -->
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-gradient-to-br from-glow-primary-500 to-glow-primary-600 rounded-xl flex items-center justify-center shadow-lg shadow-glow-primary-500/30">
-              <Package class="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 class="text-xl font-bold bg-gradient-to-r from-glow-primary-600 to-glow-primary-500 bg-clip-text text-transparent">
-                Admin
-              </h1>
-            </div>
-          </div>
-
-          <!-- Navigation Menu -->
-          <nav class="hidden md:block">
-            <ul class="flex items-center gap-1">
-              <!-- Trang Chủ -->
-              <li>
-                <NuxtLink
-                  to="/manager/dashboard"
-                  :class="[
-                    'px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center',
-                    activeSection === 'trangchu' 
-                      ? 'bg-glow-primary-500 text-white shadow-lg shadow-glow-primary-500/30' 
-                      : 'text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600'
-                  ]"
-                >
-                  <Home class="w-4 h-4 mr-2" />
-                  Trang Chủ
-                </NuxtLink>
-              </li>
-              
-              <!-- Xử lý đơn hàng -->
-              <li>
-                <NuxtLink
-                  to="/manager/orders/1"
-                  :class="[
-                    'px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center',
-                    'text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600'
-                  ]"
-                >
-                  <Package class="w-4 h-4 mr-2" />
-                  Xử lý đơn hàng
-                </NuxtLink>
-              </li>
-              
-              <!-- Phân Công Đơn -->
-              <li>
-                <NuxtLink
-                  to="/manager/orders/assign"
-                  :class="[
-                    'px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center',
-                    activeSection === 'phancong' 
-                      ? 'bg-glow-primary-500 text-white shadow-lg shadow-glow-primary-500/30' 
-                      : 'text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600'
-                  ]"
-                >
-                  <UserCheck class="w-4 h-4 mr-2" />
-                  Phân Công Đơn
-                </NuxtLink>
-              </li>
-              
-              <!-- Theo Dõi Trạng Thái -->
-              <li>
-                <NuxtLink
-                  to="/manager/orders"
-                  :class="[
-                    'px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center',
-                    activeSection === 'theodoi' 
-                      ? 'bg-glow-primary-500 text-white shadow-lg shadow-glow-primary-500/30' 
-                      : 'text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600'
-                  ]"
-                >
-                  <Activity class="w-4 h-4 mr-2" />
-                  Theo Dõi Trạng Thái
-                </NuxtLink>
-              </li>
-              
-              <!-- Xử Lý Đột Xuất -->
-              <li>
-                <NuxtLink
-                  to="/manager/orders/emergency"
-                  :class="[
-                    'px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center',
-                    activeSection === 'dotxuat' 
-                      ? 'bg-glow-primary-500 text-white shadow-lg shadow-glow-primary-500/30' 
-                      : 'text-gray-600 hover:bg-glow-primary-50 hover:text-glow-primary-600'
-                  ]"
-                >
-                  <Zap class="w-4 h-4 mr-2" />
-                  Xử Lý Đột Xuất
-                </NuxtLink>
-              </li>
-            </ul>
-          </nav>
-
-          <!-- User Info & Logout -->
-          <div class="flex items-center gap-4">
-            <div class="text-right hidden sm:block">
-            <p class="text-sm font-semibold text-gray-900">{{ user?.full_name }}</p>
-            <p class="text-xs text-gray-500">{{ user?.email }}</p>
-          </div>
-            <button
-              @click="handleLogout"
-              class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-glow-primary-500 to-glow-primary-600 rounded-lg hover:shadow-lg hover:shadow-glow-primary-500/30 transition-all flex items-center gap-2"
-            >
-              <LogOut class="w-4 h-4" />
-              <span class="hidden sm:inline">Đăng xuất</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
-
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-glow-primary-50/30">    
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Stats Grid -->

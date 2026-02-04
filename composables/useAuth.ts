@@ -11,7 +11,6 @@ import type {
   GeoPoint
 } from '@/@type/auth'
 import { useFcm } from '@/composables/useFcm'
-import { data } from 'autoprefixer'
 
 export const useAuth = () => {
   const api = useApi()
@@ -35,6 +34,9 @@ export const useAuth = () => {
       localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, response.access_token)
       localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.refresh_token)
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user))
+      if(response.user.role=='admin' && response.user.post_office_id){
+        localStorage.setItem(STORAGE_KEYS.POST_OFFICE_ID,response.user.post_office_id)
+      }
     }
   }
 
@@ -44,6 +46,7 @@ export const useAuth = () => {
       localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN)
       localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN)
       localStorage.removeItem(STORAGE_KEYS.USER)
+      localStorage.removeItem(STORAGE_KEYS.POST_OFFICE_ID)
     }
   }
 
@@ -62,6 +65,7 @@ export const useAuth = () => {
         }
       }
     }
+    
     return false
   }
 
@@ -143,7 +147,10 @@ export const useAuth = () => {
         // Cập nhật localStorage
         if (import.meta.client) {
           localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.data))
-        }
+            if (response.data.role === 'admin' && response.data.post_office_id) {
+                      localStorage.setItem(STORAGE_KEYS.POST_OFFICE_ID, response.data.post_office_id)
+              }       
+          }
         return true
       }
 
@@ -272,6 +279,13 @@ export const useAuth = () => {
     router.push('/login')
   }
 
+  const postOfficeId = computed(() => {
+  if (user.value?.role === 'admin') {
+    return user.value.post_office_id
+  }
+  return null
+})
+
   return {
     // State
     user,
@@ -279,6 +293,7 @@ export const useAuth = () => {
     isLoading,
     error,
     isAuthenticated,
+    postOfficeId,
 
     // Methods
     login,
