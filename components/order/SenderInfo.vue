@@ -1,3 +1,4 @@
+// components/order/SenderInfo.vue
 <template>
   <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
     <div class="flex items-center justify-between mb-4">
@@ -39,50 +40,76 @@
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Địa chỉ lấy hàng <span class="text-red-500">*</span></label>
         <div class="flex gap-2">
-            <input
-              v-model="localInfo.address"
-              type="text"
-              placeholder="Nhập địa chỉ hoặc chọn trên bản đồ"
-              class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition"
-            />
-            <button
-                @click="showMapModal = true"
-                type="button"
-                class="px-4 py-2.5 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors flex items-center gap-2 border border-purple-200 whitespace-nowrap"
-            >
-                <MapPin class="w-5 h-5" />
-                Bản đồ
-            </button>
+          <input
+            v-model="localInfo.address"
+            type="text"
+            placeholder="Nhập địa chỉ hoặc chọn trên bản đồ"
+            class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition"
+          />
+          <button
+            @click="showMapModal = true"
+            type="button"
+            class="px-4 py-2.5 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors flex items-center gap-2 border border-purple-200 whitespace-nowrap"
+          >
+            <MapPin class="w-5 h-5" />
+            Bản đồ
+          </button>
         </div>
       </div>
 
+      <!-- Hiển thị tọa độ -->
       <div v-if="localInfo.location" class="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 p-2 rounded border border-gray-200">
         <Map class="w-4 h-4" />
         <span>Tọa độ: {{ formatLocation(localInfo.location) }}</span>
       </div>
+
+      <!-- Hiển thị area code đã sinh -->
+      <div v-if="localInfo.areaCode" class="space-y-2">
+        <label class="block text-sm font-medium text-gray-700">
+          Mã khu vực (pickup_area_code)
+        </label>
+        <div class="flex items-center gap-2">
+          <input
+            v-model="localInfo.areaCode"
+            type="text"
+            readonly
+            class="flex-1 px-4 py-2.5 bg-green-50 border border-green-200 rounded-lg text-green-800 font-mono text-sm"
+            placeholder="Tự động sinh từ địa chỉ"
+          />
+          <div class="flex items-center gap-1 text-green-600 text-xs">
+            <Check class="w-4 h-4" />
+            <span>Tự động</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading state khi đang sinh area code -->
+      <div v-if="isGeneratingAreaCode" class="flex items-center gap-2 text-sm text-purple-600 bg-purple-50 p-2 rounded border border-purple-200">
+        <Loader2 class="w-4 h-4 animate-spin" />
+        <span>Đang xác định mã khu vực...</span>
+      </div>
     </div>
 
     <LocationPickerModal
-        v-model="showMapModal"
-        title="Chọn địa điểm lấy hàng"
-        :initial-lat="localInfo.location?.lat"
-        :initial-lng="localInfo.location?.lng"
-        @select="handleLocationSelect"
+      v-model="showMapModal"
+      title="Chọn địa điểm lấy hàng"
+      :initial-lat="localInfo.location?.lat"
+      :initial-lng="localInfo.location?.lng"
+      @select="handleLocationSelect"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue'
-import { Send, Map, MapPin } from 'lucide-vue-next'
+import { ref, watch, computed } from 'vue'
+import { Send, Map, MapPin, Check, Loader2 } from 'lucide-vue-next'
 import LocationPickerModal from '../map/LocationPicker.vue' 
 import type { User } from '@/@type/auth'
 import type { GeoPoint } from '@/@type/order'
+import { getAreaCodeFromLocation } from '@/utils/areaCodeService'
 
-// Định nghĩa Props và Emits
 const props = defineProps<{
   user: User | null
-  // Dùng modelValue để parent có thể v-model dữ liệu này
   modelValue: {
     name: string
     phone: string
@@ -94,55 +121,65 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue'])
 
-// State nội bộ
+// State
 const showMapModal = ref(false)
 const localInfo = ref({ ...props.modelValue })
+const isGeneratingAreaCode = ref(false)
 
 // Check xem user có sửa gì so với mặc định không
 const isModified = computed(() => {
-    if (!props.user) return false
-    return localInfo.value.name !== props.user.full_name ||
-           localInfo.value.phone !== props.user.phone ||
-           localInfo.value.address !== props.user.address_detail
+  if (!props.user) return false
+  return localInfo.value.name !== props.user.full_name ||
+         localInfo.value.phone !== props.user.phone ||
+         localInfo.value.address !== props.user.address_detail
 })
 
-// Hàm format tọa độ cho đẹp
+// Format tọa độ
 const formatLocation = (location: GeoPoint | null | undefined) => {
   if (!location) return ''
   return `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`
 }
 
-// Khi chọn từ Modal bản đồ
-const handleLocationSelect = (location: GeoPoint, address: string) => {
-    localInfo.value.location = location
-    localInfo.value.address = address // Tự động điền địa chỉ từ map
-    // Bạn có thể xử lý areaCode ở đây nếu API map trả về
+// 🔥 XỬ LÝ KHI CHỌN TỪ BẢN ĐỒ
+const handleLocationSelect = async (location: GeoPoint, address: string) => {
+  localInfo.value.location = location
+  localInfo.value.address = address
+
+  // 🎯 TỰ ĐỘNG SINH AREA CODE
+  isGeneratingAreaCode.value = true
+  try {
+    const areaCode = await getAreaCodeFromLocation(location, address)
+    localInfo.value.areaCode = areaCode
+  } catch (error) {
+    console.error('Error generating area code:', error)
+    localInfo.value.areaCode = 'UNKNOWN'
+  } finally {
+    isGeneratingAreaCode.value = false
+  }
 }
 
-// Watch sự thay đổi của localInfo để báo lên Parent
+// Watch để emit changes
 watch(localInfo, (newVal) => {
-    emit('update:modelValue', newVal)
+  emit('update:modelValue', newVal)
 }, { deep: true })
 
-// Hàm reset về thông tin user gốc
+// Reset về thông tin mặc định
 const resetToDefault = () => {
-    if (props.user) {
-        localInfo.value = {
-            name: props.user.full_name || '',
-            phone: props.user.phone || '',
-            address: props.user.address_detail || '',
-            areaCode: props.user.area_code || '',
-            location: props.user.location || null
-        }
+  if (props.user) {
+    localInfo.value = {
+      name: props.user.full_name || '',
+      phone: props.user.phone || '',
+      address: props.user.address_detail || '',
+      areaCode: props.user.area_code || '',
+      location: props.user.location || null
     }
+  }
 }
 
-// Khởi tạo lần đầu khi props.user load xong (trường hợp user load async)
+// Auto-fill khi user load xong
 watch(() => props.user, (newUser) => {
-    // Chỉ auto-fill nếu form đang trống (tránh ghi đè khi user đang nhập)
-    if (newUser && !localInfo.value.name) {
-        resetToDefault()
-    }
+  if (newUser && !localInfo.value.name) {
+    resetToDefault()
+  }
 }, { immediate: true })
-
 </script>
