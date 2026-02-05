@@ -54,14 +54,14 @@ export const useSchedule = () => {
       }
 
       const response = await api.get<Schedule[]>(
-        `/api/v1/schedules?${queryParams.toString()}`,
+        `/api/v1/schedules/?${queryParams.toString()}`,
         true
       )
 
       const schedules = (response as ApiResponse<Schedule[]>).data || []
       return Array.isArray(schedules) ? schedules : []
     } catch (e) {
-      console.error('❌ Error fetching schedules:', e)
+      console.error(' Error fetching schedules:', e)
       error.value = 'Không thể tải danh sách lịch giao hàng'
       return []
     } finally {
@@ -92,7 +92,7 @@ export const useSchedule = () => {
 
       // Get schedule items
       const itemsResponse = await api.get<ScheduleItem[]>(
-        `/api/approve-orders/schedule/${scheduleId}/items`,
+        `/api/v1/schedules/${scheduleId}/items`,
         true
       )
 
@@ -104,7 +104,7 @@ export const useSchedule = () => {
         items: Array.isArray(items) ? items : []
       }
     } catch (e) {
-      console.error('❌ Error fetching schedule detail:', e)
+      console.error(' Error fetching schedule detail:', e)
       error.value = 'Không thể tải chi tiết lịch giao hàng'
       return null
     } finally {
@@ -140,7 +140,7 @@ export const useSchedule = () => {
       error.value = 'Không thể gán tài xế'
       return false
     } catch (e) {
-      console.error('❌ Error assigning driver:', e)
+      console.error(' Error assigning driver:', e)
       error.value = 'Lỗi khi gán tài xế'
       return false
     } finally {
@@ -172,14 +172,14 @@ export const useSchedule = () => {
       const result = (response as ApiResponse).data
 
       if (result) {
-        console.log(`✅ Đã cập nhật trạng thái schedule ${scheduleId} -> ${status}`)
+        console.log(` Đã cập nhật trạng thái schedule ${scheduleId} -> ${status}`)
         return true
       }
 
       error.value = 'Không thể cập nhật trạng thái'
       return false
     } catch (e) {
-      console.error('❌ Error updating schedule status:', e)
+      console.error(' Error updating schedule status:', e)
       error.value = 'Lỗi khi cập nhật trạng thái'
       return false
     } finally {
@@ -211,14 +211,14 @@ export const useSchedule = () => {
       const result = (response as ApiResponse).data
 
       if (result) {
-        console.log('✅ Đã hủy schedule:', scheduleId)
+        console.log('Đã hủy schedule:', scheduleId)
         return true
       }
 
       error.value = 'Không thể hủy lịch'
       return false
     } catch (e) {
-      console.error('❌ Error cancelling schedule:', e)
+      console.error(' Error cancelling schedule:', e)
       error.value = 'Lỗi khi hủy lịch'
       return false
     } finally {
@@ -249,7 +249,7 @@ export const useSchedule = () => {
 
       return stats
     } catch (e) {
-      console.error('❌ Error getting schedule statistics:', e)
+      console.error(' Error getting schedule statistics:', e)
       return null
     }
   }

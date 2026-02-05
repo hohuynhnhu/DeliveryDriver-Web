@@ -1,35 +1,6 @@
 <template>
   <div class="analytics-dashboard">
-    <!-- HEADER -->
-    <header class="dashboard-header">
-      <div class="header-content">
-        <div class="title-section">
-          <h1 class="title">Analytics Dashboard</h1>
-          <p class="subtitle">Market Basket Analysis cho Delivery Routes</p>
-        </div>
-        
-        <button @click="refreshAll" :disabled="isLoading" class="refresh-btn">
-          <span v-if="!isLoading">Refresh</span>
-          <span v-else class="loading-spin">⟳</span>
-        </button>
-      </div>
-
-      <!-- FILTERS -->
-      <div class="filters">
-        <div class="filter-group">
-          <label>Min Support</label>
-          <input v-model.number="minSupport" type="number" step="0.01" min="0" max="1" />
-        </div>
-        <div class="filter-group">
-          <label>Limit</label>
-          <input v-model.number="limit" type="number" min="1" max="200" />
-        </div>
-        <button @click="loadData" :disabled="isLoading" class="analyze-btn">
-          <span v-if="!isLoading"> Analyze</span>
-          <span v-else>Loading...</span>
-        </button>
-      </div>
-    </header>
+    
 
     <!-- ERROR -->
     <div v-if="error" class="error-banner">
@@ -236,7 +207,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useData } from '@/composables/useData'
-
+definePageMeta({
+  layout: 'manager'
+})
 const {
   locationPairs,
   postOfficeSuggestions,
