@@ -68,7 +68,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { Home, Package, UserCheck, Activity, Zap, LogOut } from 'lucide-vue-next'
 import { useAuth } from '@/composables/useAuth'
-
+import { BarChart3 } from 'lucide-vue-next'
 const route = useRoute()
 const { user, logout } = useAuth()
 
@@ -82,7 +82,8 @@ const menu = [
   { key: 'xuly', label: 'Xử lý đơn hàng', to: '/manager/orders/1', icon: Package },
   { key: 'phancong', label: 'Phân Công Đơn', to: '/manager/orders/assign', icon: UserCheck },
   { key: 'theodoi', label: 'Theo Dõi Trạng Thái', to: '/manager/orders', icon: Activity },
-  { key: 'dotxuat', label: 'Xử Lý Đột Xuất', to: '/manager/orders/emergency', icon: Zap }
+  { key: 'dotxuat', label: 'Xử Lý Đột Xuất', to: '/manager/orders/emergency', icon: Zap },
+  { key: 'phanich', label: 'Phân Tích', to: '/manager/analytics', icon: BarChart3 },
 ]
 
 /* Active section */
