@@ -3,7 +3,18 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Package, Zap,  RefreshCw, AlertCircle } from 'lucide-vue-next'
 import type { OrderSummary } from '@/@type/order'
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
 
+dayjs.extend(relativeTime)
+dayjs.extend(utc)
+dayjs.extend(timezone)
+
+const getTimeAgo = (dateStr: string) => {
+  return dayjs.tz(dateStr, 'Asia/Ho_Chi_Minh').fromNow()
+}
 definePageMeta({
   layout: 'manager'
 })
@@ -71,28 +82,16 @@ const formatDate = (dateStr: string) => {
   })
 }
 
-// Tính thời gian đã trôi qua
-const getTimeAgo = (dateStr: string) => {
-  const now = new Date()
-  const created = new Date(dateStr)
-  const diffMs = now.getTime() - created.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMins / 60)
-  
-  if (diffMins < 60) return `${diffMins} phút trước`
-  if (diffHours < 24) return `${diffHours} giờ trước`
-  return `${Math.floor(diffHours / 24)} ngày trước`
-}
 
-// Check xem có phải đơn khẩn cấp không (tạo từ hơn 2 giờ mà vẫn pending)
+// Check xem có phải đơn khẩn cấp không (tạo từ hơn 2 ngày mà vẫn pending)
 const isUrgent = (order: OrderSummary) => {
   if (order.status !== 'pending') return false
-  
-  const now = new Date()
-  const created = new Date(order.created_at)
-  const diffHours = (now.getTime() - created.getTime()) / (1000 * 60 * 60)
-  
-  return diffHours > 2 // Quá 2 giờ chưa xử lý
+
+  const now = Date.now()
+  const created = new Date(order.created_at).getTime()
+  const diffDays = (now - created) / (1000 * 60 * 60 * 24)
+
+  return diffDays > 2
 }
 
 /* ===== METHODS ===== */
@@ -107,6 +106,8 @@ const loadEmergencyOrders = async () => {
     status: 'pending',
     limit: 50 
   })
+  console.log('pendingOrders:', pendingOrders)
+
   
   const confirmedOrders = await fetchPostOfficeOrders({ 
     status: 'confirmed',
@@ -161,7 +162,7 @@ onMounted(() => {
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-500">Đơn khẩn cấp (>2h)</p>
+              <p class="text-sm text-gray-500">Đơn khẩn cấp </p>
               <p class="text-2xl font-bold text-red-600 mt-1">
                 {{ emergencyOrders.filter(o => isUrgent(o)).length }}
               </p>
@@ -262,9 +263,7 @@ onMounted(() => {
                   >
                     {{ pickupStatusLabel(order.pickup_status) }}
                   </span>
-                  <span class="text-gray-500">
-                    {{ order.total_packages }} kiện
-                  </span>
+                
                 </div>
                 
                 <div class="flex items-center justify-between mt-2">
@@ -336,11 +335,6 @@ onMounted(() => {
                   <p class="text-xs text-gray-500 mb-1">Thời gian tạo</p>
                   <p class="text-sm font-semibold text-gray-900">{{ formatDate(selectedOrder.created_at) }}</p>
                   <p class="text-xs text-gray-500 mt-1">{{ getTimeAgo(selectedOrder.created_at) }}</p>
-                </div>
-
-                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <p class="text-xs text-gray-500 mb-1">Tổng số kiện</p>
-                  <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.total_packages }} kiện</p>
                 </div>
               </div>
 

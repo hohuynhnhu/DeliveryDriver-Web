@@ -79,7 +79,6 @@ const handleLogout = async () => {
 /* Menu config */
 const menu = [
   { key: 'trangchu', label: 'Trang Chủ', to: '/manager/dashboard', icon: Home },
-  { key: 'xuly', label: 'Xử lý đơn hàng', to: '/manager/orders/1', icon: Package },
   { key: 'phancong', label: 'Phân Công Đơn', to: '/manager/orders/assign', icon: UserCheck },
   { key: 'theodoi', label: 'Theo Dõi Trạng Thái', to: '/manager/orders', icon: Activity },
   { key: 'dotxuat', label: 'Xử Lý Đột Xuất', to: '/manager/orders/emergency', icon: Zap }

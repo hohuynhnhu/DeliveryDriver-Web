@@ -36,8 +36,10 @@ export const useApi = () => {
 
     if (requireAuth) {
       const token = getToken()
+
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
+
       }
     }
 

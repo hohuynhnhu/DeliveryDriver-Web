@@ -1,228 +1,295 @@
 <script setup lang="ts">
-import { useCustomerSession } from '@/composables/useCustomerSession';
-import { Package, Users, AlertCircle, LogOut, UserCheck, Activity, Home, Zap, ShoppingCart, DollarSign } from 'lucide-vue-next';
+import { ref, onMounted, computed } from 'vue'
+import { Package, Users, AlertCircle, Zap, ShoppingCart, CheckCircle2 } from 'lucide-vue-next'
+import type { OrderSummary } from '@/@type/order'
 
-// Vô hiệu hóa layout mặc định
 definePageMeta({
-  layout:'manager'
-});
+  layout: 'manager'
+})
 
-const { user, logout } = useAuth();
-const route = useRoute();
+const { user } = useAuth()
+const { 
+  getOrderStatistics, 
+  getPendingOrders,
+  isLoading 
+} = useOrderManagement()
 
+const { fetchPostOfficeOrders } = useOrder()
 
-// Mock data
-const stats = ref([
-  { 
-    title: 'Tổng đơn hàng', 
-    value: '1,234', 
-    change: '+12.5%', 
-    icon: ShoppingCart,
-    color: 'blue'
-  },
-  { 
-    title: 'Doanh thu', 
-    value: '₫45.2M', 
-    change: '+8.2%', 
-    icon: DollarSign,
-    color: 'green'
-  },
-  { 
-    title: 'Khách hàng', 
-    value: '856', 
-    change: '+15.3%', 
-    icon: Users,
-    color: 'purple'
-  },
-  { 
-    title: 'Đơn chờ xử lý', 
-    value: '23', 
-    change: '-5.1%', 
-    icon: AlertCircle,
-    color: 'orange'
+// ============================================================================
+// STATE
+// ============================================================================
+const statistics = ref<any>(null)
+const recentOrders = ref<OrderSummary[]>([])
+
+// ============================================================================
+// COMPUTED - STATS CARDS
+// ============================================================================
+const stats = computed(() => {
+  if (!statistics.value) return []
+  
+  return [
+    { 
+      title: 'Tổng đơn hàng', 
+      value: statistics.value.pending_count + statistics.value.total_confirmed + statistics.value.picked_count,
+      icon: ShoppingCart,
+      color: 'blue'
+    },
+    { 
+      title: 'Chờ duyệt', 
+      value: statistics.value.pending_count,
+      icon: AlertCircle,
+      color: 'orange'
+    },
+    { 
+      title: 'Đã duyệt', 
+      value: statistics.value.total_confirmed,
+      icon: Package,
+      color: 'purple'
+    },
+    { 
+      title: 'Đã lấy hàng', 
+      value: statistics.value.picked_count,
+      icon: CheckCircle2,
+      color: 'green'
+    }
+  ]
+})
+
+// ============================================================================
+// METHODS
+// ============================================================================
+const loadData = async () => {
+  try {
+    // Load statistics
+    statistics.value = await getOrderStatistics()
+    
+    // Load recent orders (limit 5)
+    const allOrders = await fetchPostOfficeOrders({ 
+      status: 'pending',
+      limit: 5 
+    })
+    recentOrders.value = allOrders || []
+    
+    console.log(' Dashboard loaded:', {
+      stats: statistics.value,
+      orders: recentOrders.value.length
+    })
+  } catch (e) {
+    console.error(' Error loading dashboard:', e)
   }
-]);
+}
 
+// ============================================================================
+// HELPERS
+// ============================================================================
+const statusColor = (status: string) => {
+  const colors: Record<string, string> = {
+    pending: 'bg-yellow-100 text-yellow-700',
+    confirmed: 'bg-blue-100 text-blue-700',
+    processing: 'bg-purple-100 text-purple-700',
+    completed: 'bg-green-100 text-green-700',
+    cancelled: 'bg-red-100 text-red-700'
+  }
+  return colors[status] || 'bg-gray-100 text-gray-700'
+}
 
+const statusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    pending: 'Chờ duyệt',
+    confirmed: 'Đã duyệt',
+    processing: 'Đang xử lý',
+    completed: 'Hoàn thành',
+    cancelled: 'Đã hủy'
+  }
+  return labels[status] || status
+}
+
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+}
+
+// ============================================================================
+// LIFECYCLE
+// ============================================================================
+onMounted(() => {
+  loadData()
+})
 </script>
 
 <template>
   <div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-glow-primary-50/30">    
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Stats Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div
-          v-for="(stat, index) in stats"
-          :key="index"
-          class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all hover:border-glow-primary-200"
-        >
-          <div class="flex items-center justify-between mb-4">
-            <div 
-              class="w-12 h-12 rounded-lg flex items-center justify-center"
-              :class="{
-                'bg-blue-100': stat.color === 'blue',
-                'bg-green-100': stat.color === 'green',
-                'bg-purple-100': stat.color === 'purple',
-                'bg-orange-100': stat.color === 'orange'
-              }"
-            >
-              <component 
-                :is="stat.icon" 
-                class="w-6 h-6"
+      
+      <!-- Loading State -->
+      <div v-if="isLoading && !statistics" class="text-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-glow-primary-500 mx-auto"></div>
+        <p class="text-gray-500 mt-4">Đang tải dữ liệu...</p>
+      </div>
+
+      <template v-else>
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div
+            v-for="(stat, index) in stats"
+            :key="index"
+            class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all hover:border-glow-primary-200"
+          >
+            <div class="flex items-center justify-between mb-4">
+              <div 
+                class="w-12 h-12 rounded-lg flex items-center justify-center"
                 :class="{
-                  'text-blue-600': stat.color === 'blue',
-                  'text-green-600': stat.color === 'green',
-                  'text-purple-600': stat.color === 'purple',
-                  'text-orange-600': stat.color === 'orange'
+                  'bg-blue-100': stat.color === 'blue',
+                  'bg-green-100': stat.color === 'green',
+                  'bg-purple-100': stat.color === 'purple',
+                  'bg-orange-100': stat.color === 'orange'
                 }"
-              />
+              >
+                <component 
+                  :is="stat.icon" 
+                  class="w-6 h-6"
+                  :class="{
+                    'text-blue-600': stat.color === 'blue',
+                    'text-green-600': stat.color === 'green',
+                    'text-purple-600': stat.color === 'purple',
+                    'text-orange-600': stat.color === 'orange'
+                  }"
+                />
+              </div>
+             
             </div>
-            <span 
-              class="text-sm font-semibold px-2 py-1 rounded-full"
-              :class="{
-                'bg-green-100 text-green-700': stat.change.startsWith('+'),
-                'bg-red-100 text-red-700': stat.change.startsWith('-')
-              }"
-            >
-              {{ stat.change }}
-            </span>
+            <h3 class="text-gray-600 text-sm font-medium mb-1">{{ stat.title }}</h3>
+            <p class="text-2xl font-bold text-gray-900">{{ stat.value }}</p>
           </div>
-          <h3 class="text-gray-600 text-sm font-medium mb-1">{{ stat.title }}</h3>
-          <p class="text-2xl font-bold text-gray-900">{{ stat.value }}</p>
         </div>
-      </div>
 
-      <!-- Quick Actions -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-        <h3 class="text-lg font-bold text-gray-900 mb-4">Thao tác nhanh</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <NuxtLink
-            to="/manager/orders/1"
-            class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-glow-primary-500 hover:bg-glow-primary-50 transition-all group"
-          >
-            <div class="w-10 h-10 bg-glow-primary-100 rounded-lg flex items-center justify-center group-hover:bg-glow-primary-200 transition-colors">
-              <Package class="w-5 h-5 text-glow-primary-600" />
-            </div>
-            <div class="text-left">
-              <p class="font-semibold text-gray-900">Xử lý đơn hàng</p>
-              <p class="text-sm text-gray-500">Quản lý đơn hàng</p>
-            </div>
-          </NuxtLink>
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Thao tác nhanh</h3>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <NuxtLink
+              to="/manager/orders/management"
+              class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-glow-primary-500 hover:bg-glow-primary-50 transition-all group"
+            >
+              <div class="w-10 h-10 bg-glow-primary-100 rounded-lg flex items-center justify-center group-hover:bg-glow-primary-200 transition-colors">
+                <Package class="w-5 h-5 text-glow-primary-600" />
+              </div>
+              <div class="text-left">
+                <p class="font-semibold text-gray-900">Quản lý đơn hàng</p>
+                <p class="text-sm text-gray-500">Tiến trình đơn hàng</p>
+              </div>
+            </NuxtLink>
 
-          <NuxtLink
-            to="/manager/orders/assign"
-            class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-glow-primary-500 hover:bg-glow-primary-50 transition-all group"
-          >
-            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-              <Users class="w-5 h-5 text-purple-600" />
-            </div>
-            <div class="text-left">
-              <p class="font-semibold text-gray-900">Phân công tài xế</p>
-              <p class="text-sm text-gray-500">Gán đơn cho tài xế</p>
-            </div>
-          </NuxtLink>
+            <NuxtLink
+              to="/manager/orders/emergency"
+              class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-red-500 hover:bg-red-50 transition-all group"
+            >
+              <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                <Zap class="w-5 h-5 text-red-600" />
+              </div>
+              <div class="text-left">
+                <p class="font-semibold text-gray-900">Xử lý đột xuất</p>
+                <p class="text-sm text-gray-500">Đơn khẩn cấp</p>
+              </div>
+            </NuxtLink>
 
-          <NuxtLink
-            to="/manager/orders/emergency"
-            class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-red-500 hover:bg-red-50 transition-all group"
-          >
-            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
-              <Zap class="w-5 h-5 text-red-600" />
-            </div>
-            <div class="text-left">
-              <p class="font-semibold text-gray-900">Xử lý đột xuất</p>
-              <p class="text-sm text-gray-500">Đơn hàng khẩn cấp</p>
-            </div>
-          </NuxtLink>
+            <NuxtLink
+              to="/manager/orders/assign"
+              class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all group"
+            >
+              <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                <Users class="w-5 h-5 text-purple-600" />
+              </div>
+              <div class="text-left">
+                <p class="font-semibold text-gray-900">Phân công</p>
+                <p class="text-sm text-gray-500">Gán tài xế</p>
+              </div>
+            </NuxtLink>
+
+            <NuxtLink
+              to="/manager/orders"
+              class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group"
+            >
+              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                <CheckCircle2 class="w-5 h-5 text-blue-600" />
+              </div>
+              <div class="text-left">
+                <p class="font-semibold text-gray-900">Duyệt đơn</p>
+                <p class="text-sm text-gray-500">Xét duyệt nhanh</p>
+              </div>
+            </NuxtLink>
+          </div>
         </div>
-      </div>
 
-      <!-- Recent Orders Table -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-bold text-gray-900">Đơn hàng gần đây</h3>
-          <NuxtLink
-            to="/manager/orders"
-            class="text-sm text-glow-primary-600 hover:text-glow-primary-700 font-medium"
-          >
-            Xem tất cả →
-          </NuxtLink>
+        <!-- Recent Orders Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Đơn hàng gần đây</h3>
+            <NuxtLink
+              to="/manager/orders/management"
+              class="text-sm text-glow-primary-600 hover:text-glow-primary-700 font-medium"
+            >
+              Xem tất cả →
+            </NuxtLink>
+          </div>
+
+          <!-- Empty State -->
+          <div v-if="recentOrders.length === 0" class="text-center py-12 text-gray-500">
+            <Package class="w-16 h-16 mx-auto mb-4 opacity-30" />
+            <p>Chưa có đơn hàng nào</p>
+          </div>
+
+          <!-- Orders Table -->
+          <div v-else class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-gray-200">
+                  <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Mã đơn</th>
+                  <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Địa chỉ lấy</th>
+                  <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Trạng thái</th>
+                  <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Ngày tạo</th>
+                  <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr 
+                  v-for="order in recentOrders" 
+                  :key="order.id"
+                  class="border-b border-gray-100 hover:bg-glow-primary-50/50 transition-colors"
+                >
+                  <td class="py-3 px-4 text-sm font-medium text-gray-900">
+                    #{{ order.id.substring(0, 8) }}...
+                  </td>
+                  <td class="py-3 px-4 text-sm text-gray-700">{{ order.pickup_point }}</td>
+                  <td class="py-3 px-4">
+                    <span 
+                      class="px-3 py-1 text-xs font-semibold rounded-full"
+                      :class="statusColor(order.status)"
+                    >
+                      {{ statusLabel(order.status) }}
+                    </span>
+                  </td>
+                  <td class="py-3 px-4 text-sm text-gray-500">{{ formatDate(order.created_at) }}</td>
+                  <td class="py-3 px-4">
+                    <NuxtLink
+                      :to="`/manager/orders/${order.id}`"
+                      class="text-glow-primary-600 hover:text-glow-primary-700 text-sm font-medium"
+                    >
+                      Chi tiết
+                    </NuxtLink>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div class="overflow-x-auto">
-          <table class="w-full">
-            <thead>
-              <tr class="border-b border-gray-200">
-                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Mã đơn</th>
-                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Khách hàng</th>
-                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Trạng thái</th>
-                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Tổng tiền</th>
-                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Ngày</th>
-                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="border-b border-gray-100 hover:bg-glow-primary-50/50 transition-colors">
-                <td class="py-3 px-4 text-sm font-medium text-gray-900">#ORD-001</td>
-                <td class="py-3 px-4 text-sm text-gray-700">Nguyễn Văn A</td>
-                <td class="py-3 px-4">
-                  <span class="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">
-                    Hoàn thành
-                  </span>
-                </td>
-                <td class="py-3 px-4 text-sm font-semibold text-gray-900">₫250,000</td>
-                <td class="py-3 px-4 text-sm text-gray-500">19/01/2026</td>
-                <td class="py-3 px-4">
-                  <NuxtLink
-                    to="/manager/orders/1"
-                    class="text-glow-primary-600 hover:text-glow-primary-700 text-sm font-medium"
-                  >
-                    Chi tiết
-                  </NuxtLink>
-                </td>
-              </tr>
-              <tr class="border-b border-gray-100 hover:bg-glow-primary-50/50 transition-colors">
-                <td class="py-3 px-4 text-sm font-medium text-gray-900">#ORD-002</td>
-                <td class="py-3 px-4 text-sm text-gray-700">Trần Thị B</td>
-                <td class="py-3 px-4">
-                  <span class="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700">
-                    Đang giao
-                  </span>
-                </td>
-                <td class="py-3 px-4 text-sm font-semibold text-gray-900">₫180,000</td>
-                <td class="py-3 px-4 text-sm text-gray-500">19/01/2026</td>
-                <td class="py-3 px-4">
-                  <NuxtLink
-                    to="/manager/orders/2"
-                    class="text-glow-primary-600 hover:text-glow-primary-700 text-sm font-medium"
-                  >
-                    Chi tiết
-                  </NuxtLink>
-                </td>
-              </tr>
-              <tr class="hover:bg-glow-primary-50/50 transition-colors">
-                <td class="py-3 px-4 text-sm font-medium text-gray-900">#ORD-003</td>
-                <td class="py-3 px-4 text-sm text-gray-700">Lê Văn C</td>
-                <td class="py-3 px-4">
-                  <span class="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">
-                    Chờ xử lý
-                  </span>
-                </td>
-                <td class="py-3 px-4 text-sm font-semibold text-gray-900">₫320,000</td>
-                <td class="py-3 px-4 text-sm text-gray-500">19/01/2026</td>
-                <td class="py-3 px-4">
-                  <NuxtLink
-                    to="/manager/orders/3"
-                    class="text-glow-primary-600 hover:text-glow-primary-700 text-sm font-medium"
-                  >
-                    Chi tiết
-                  </NuxtLink>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      </template>
     </main>
   </div>
 </template>

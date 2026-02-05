@@ -36,6 +36,22 @@ export const API_ENDPOINTS = {
   //stats
   admin_overview:'/api/v1/admin/stats/overview',
   admin_chart:'/api/v1/admin/stats/orders-by-date',
+
+  PICKUP_SCHEDULES: '/api/v1/pickup-schedules',
+  ASSIGN_PICKUP_DRIVER: (orderId: string) => 
+    `/api/v1/pickup-schedules/${orderId}/assign-driver`,
+  UPDATE_PICKUP_STATUS: (orderId: string) => 
+    `/api/v1/pickup-schedules/${orderId}/update-pickup-status`,
+  
+  // Approve Orders (GA Scheduling)
+  APPROVE_ORDERS: '/api/approve-orders',
+  GROUP_BY_AREA: '/api/approve-orders/group-by-area',
+  PROCESS_ALL: '/api/approve-orders/process-all',
+  PROCESS_BY_AREA: '/api/approve-orders/process-by-area',
+  
+  // Driver Scheduling (GA)
+  DRIVER_SCHEDULING: '/api/v1/driver-scheduling',
+  QUICK_SCHEDULE: '/api/v1/driver-scheduling/schedule/quick',
 }
 
 /// Storage Keys

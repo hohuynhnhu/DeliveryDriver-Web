@@ -172,26 +172,107 @@ export const useOrder = () => {
    * Lấy chi tiết đơn hàng
    */
   const fetchOrderDetail = async (orderId: string) => {
-    isLoading.value = true
-    error.value = null
+  if (!orderId) return null
 
-    try {
-      const response = await api.get(`/api/v1/orders/${orderId}`, true)
-      
-      if (response.data) {
-        return response.data
-      }
-      
-      error.value = response.error || 'Không thể tải chi tiết đơn hàng'
+  isLoading.value = true
+  error.value = null
+
+  try {
+    console.log(' Fetching order detail for ID:', orderId) 
+    console.log(' Order ID length:', orderId.length)       
+    
+    const response = await api.get(`/api/v1/orders/${orderId}`, true)
+
+    if (!response || !response.data) {
       return null
-    } catch (e) {
-      console.error('❌ Error fetching order detail:', e)
-      error.value = 'Đã xảy ra lỗi'
-      return null
-    } finally {
-      isLoading.value = false
     }
+
+    return response.data
+
+  } catch (e: any) {
+    const status = e?.response?.status || e?.status
+
+    if (status === 404) {
+      console.warn('Order not found:', orderId)
+      return null
+    }
+
+    console.error('Error fetching order detail:', e)
+    error.value = 'Đã xảy ra lỗi khi tải đơn hàng'
+    return null
+
+  } finally {
+    isLoading.value = false
   }
+}
+
+
+  const processOrder = async (
+  orderId: string,
+  action: 'approve' | 'reject' | 'request_edit',
+  note?: string,
+  rejectReason?: string
+): Promise<boolean> => {
+  isLoading.value = true
+  error.value = null
+
+  try {
+    const params = new URLSearchParams()
+    params.append('action', action)
+    if (note) params.append('note', note)
+    if (rejectReason) params.append('reject_reason', rejectReason)
+
+    const response = await api.patch(
+      `${API_ENDPOINTS.ORDERS}/${orderId}/process?${params.toString()}`,
+      {},
+      true
+    )
+
+    if (response.data) {
+      console.log('Order processed:', response.data)
+      return true
+    }
+
+    error.value = response.error || 'Không thể xử lý đơn hàng'
+    return false
+  } catch (e) {
+    console.error(' Process order error:', e)
+    error.value = 'Đã xảy ra lỗi'
+    return false
+  } finally {
+    isLoading.value = false
+  }
+}
+
+/**
+ * Chỉnh sửa thông tin đơn hàng
+ */
+const editOrderInfo = async (orderId: string, data: any): Promise<boolean> => {
+  isLoading.value = true
+  error.value = null
+
+  try {
+    const response = await api.patch(
+      `${API_ENDPOINTS.ORDERS}/${orderId}/edit`,
+      data,
+      true
+    )
+
+    if (response.data) {
+      console.log(' Order updated:', response.data)
+      return true
+    }
+
+    error.value = response.error || 'Không thể cập nhật đơn hàng'
+    return false
+  } catch (e) {
+    console.error(' Edit order error:', e)
+    error.value = 'Đã xảy ra lỗi'
+    return false
+  } finally {
+    isLoading.value = false
+  }
+}
 
   const clearError = () => {
     error.value = null
@@ -208,5 +289,7 @@ export const useOrder = () => {
     fetchPostOfficeOrders,
     fetchOrderDetail,
     clearError,
+    processOrder,
+    editOrderInfo,
   }
 }
