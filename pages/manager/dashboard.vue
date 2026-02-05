@@ -185,7 +185,6 @@ onMounted(() => {
                 <p class="text-sm text-gray-500">Tiến trình đơn hàng</p>
               </div>
             </NuxtLink>
-
             <NuxtLink
               to="/manager/orders/emergency"
               class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-red-500 hover:bg-red-50 transition-all group"
@@ -200,7 +199,7 @@ onMounted(() => {
             </NuxtLink>
 
             <NuxtLink
-              to="/manager/orders/assign"
+              to="/manager/orders/schedules"
               class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all group"
             >
               <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
