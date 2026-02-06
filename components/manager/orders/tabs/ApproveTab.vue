@@ -16,7 +16,6 @@ interface Props {
 
 const props = defineProps<Props>()
 
-// ✅ FIXED: Emit đúng signature (orderId, note)
 const emit = defineEmits<{
   selectOrder: [order: any]
   approve: [orderId: string, note: string]
@@ -36,20 +35,19 @@ const filteredOrders = computed(() => {
 })
 
 const handleSelectOrder = (order: any) => {
-  console.log('📦 Selected order object:', order)     
-  console.log('🆔 Order ID from object:', order.id)    
-  console.log('📏 Order ID length:', order.id?.length)
+  console.log(' Selected order object:', order)     
+  console.log(' Order ID from object:', order.id)    
+  console.log('Order ID length:', order.id?.length)
   emit('selectOrder', order)
 }
 
-// ✅ FIXED: Emit với orderId và note
 const handleApprove = () => {
   if (!selectedOrder.value) {
     console.error('❌ No selected order!')
     return
   }
   
-  console.log('✅ Emitting approve with:', {
+  console.log('Emitting approve with:', {
     orderId: selectedOrder.value.id,
     note: reviewNote.value
   })

@@ -66,9 +66,8 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Home, Package, UserCheck, Activity, Zap, LogOut } from 'lucide-vue-next'
+import { Home, Package, Activity, LogOut,  BarChart3, Calendar, Bell } from 'lucide-vue-next'
 import { useAuth } from '@/composables/useAuth'
-import { BarChart3 } from 'lucide-vue-next'
 const route = useRoute()
 const { user, logout } = useAuth()
 
@@ -79,22 +78,24 @@ const handleLogout = async () => {
 /* Menu config */
 const menu = [
   { key: 'trangchu', label: 'Trang Chủ', to: '/manager/dashboard', icon: Home },
-  { key: 'phancong', label: 'Phân Công Đơn', to: '/manager/orders/schedules', icon: UserCheck },
+  { key: 'phancong', label: 'Tạo lịch', to: '/manager/schedules', icon:  Calendar},
   { key: 'theodoi', label: 'Theo Dõi Trạng Thái', to: '/manager/orders', icon: Activity },
-  { key: 'dotxuat', label: 'Xử Lý Đột Xuất', to: '/manager/orders/emergency', icon: Zap },
+  { key: 'dotxuat', label: 'Thông báo', to: '/manager/orders/emergency', icon: Bell },
   { key: 'phanich', label: 'Phân Tích', to: '/manager/analytics', icon: BarChart3 },
 ]
 
 /* Active section */
 const activeSection = computed(() => {
   const path = route.path
-  if (path.startsWith('/manager/orders/assign')) return 'phancong'
+
+  if (path.startsWith('/manager/schedules')) return 'phancong'
   if (path.startsWith('/manager/orders/emergency')) return 'dotxuat'
   if (path === '/manager/orders') return 'theodoi'
-  if (path.startsWith('/manager/orders/')) return 'xuly'
-  return 'trangchu'
-})
+  if (path.startsWith('/manager/analytics')) return 'phanich'
+  if (path.startsWith('/manager/dashboard')) return 'trangchu'
 
+  return ''
+})
 const navClass = (key) => [
   'px-4 py-2 rounded-lg font-medium text-sm transition-all inline-flex items-center',
   activeSection.value === key

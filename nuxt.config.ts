@@ -32,8 +32,17 @@ export default defineNuxtConfig({
     },
   },
 
-  modules: ['@nuxtjs/tailwindcss'],
-
+  modules: ['@nuxtjs/tailwindcss','@nuxtjs/supabase',],
+  supabase: {
+    url: process.env.NUXT_PUBLIC_SUPABASE_URL,
+    key: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY,
+    redirect: false,
+    redirectOptions: {
+      login: '/login',
+      callback: '/confirm',
+      exclude: ['/', '/register'],
+    },
+  },
   // ============================================
   // FIX WEBSOCKET HMR ERROR
   // ============================================

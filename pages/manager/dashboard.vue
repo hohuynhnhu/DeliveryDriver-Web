@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { Package, Users, AlertCircle, Zap, ShoppingCart, CheckCircle2 } from 'lucide-vue-next'
+import { Package, Users, AlertCircle, Zap, ShoppingCart, CheckCircle2, BadgeCheck, CircleX,  } from 'lucide-vue-next'
 import type { OrderSummary } from '@/@type/order'
 
 definePageMeta({
@@ -8,19 +8,25 @@ definePageMeta({
 })
 
 const { user } = useAuth()
-const { 
-  getOrderStatistics, 
-  getPendingOrders,
-  isLoading 
-} = useOrderManagement()
-
 const { fetchPostOfficeOrders } = useOrder()
+
+// ============================================================================
+// COMPOSABLES
+// ============================================================================
+// Sử dụng composable useOrderStatistics
+const { 
+  fetchStatistics, 
+  statistics, 
+  isLoading: statsLoading,
+  error: statsError,
+  startAutoRefresh
+} = useOrderStatistics()
 
 // ============================================================================
 // STATE
 // ============================================================================
-const statistics = ref<any>(null)
 const recentOrders = ref<OrderSummary[]>([])
+const ordersLoading = ref(false)
 
 // ============================================================================
 // COMPUTED - STATS CARDS
@@ -31,7 +37,7 @@ const stats = computed(() => {
   return [
     { 
       title: 'Tổng đơn hàng', 
-      value: statistics.value.pending_count + statistics.value.total_confirmed + statistics.value.picked_count,
+      value: statistics.value.total_orders,
       icon: ShoppingCart,
       color: 'blue'
     },
@@ -43,41 +49,74 @@ const stats = computed(() => {
     },
     { 
       title: 'Đã duyệt', 
-      value: statistics.value.total_confirmed,
-      icon: Package,
+      value: statistics.value.confirmed_count,
+      icon: BadgeCheck,
       color: 'purple'
+    },
+    {
+      title: 'Đã hủy',
+      value: statistics.value.cancelled_count,
+      icon: CircleX,
+      color:'red'
     },
     { 
       title: 'Đã lấy hàng', 
       value: statistics.value.picked_count,
-      icon: CheckCircle2,
-      color: 'green'
-    }
+      icon:  Package,
+      color: 'blue'
+    },
+    {
+      title:'Hoàn thành',
+      value:statistics.value.completed_count,
+      icon : CheckCircle2,
+      color:'green'
+    },
+    
   ]
 })
+
+// Tổng hợp loading state
+const isLoading = computed(() => statsLoading.value || ordersLoading.value)
 
 // ============================================================================
 // METHODS
 // ============================================================================
-const loadData = async () => {
+const loadRecentOrders = async () => {
+  ordersLoading.value = true
   try {
-    // Load statistics
-    statistics.value = await getOrderStatistics()
-    
-    // Load recent orders (limit 5)
     const allOrders = await fetchPostOfficeOrders({ 
       status: 'pending',
       limit: 5 
     })
     recentOrders.value = allOrders || []
     
-    console.log(' Dashboard loaded:', {
+    console.log(' Recent orders loaded:', recentOrders.value.length)
+  } catch (e) {
+    console.error(' Error loading recent orders:', e)
+  } finally {
+    ordersLoading.value = false
+  }
+}
+
+const loadData = async () => {
+  try {
+    // Load statistics từ composable
+    await fetchStatistics()
+    
+    // Load recent orders
+    await loadRecentOrders()
+    
+    console.log('✅ Dashboard loaded:', {
       stats: statistics.value,
       orders: recentOrders.value.length
     })
   } catch (e) {
     console.error(' Error loading dashboard:', e)
   }
+}
+
+const refreshData = async () => {
+  await loadData()
 }
 
 // ============================================================================
@@ -117,8 +156,12 @@ const formatDate = (dateStr: string) => {
 // ============================================================================
 // LIFECYCLE
 // ============================================================================
-onMounted(() => {
-  loadData()
+onMounted(async () => {
+  // Load dữ liệu ban đầu
+  await loadData()
+  
+  // Bật auto-refresh mỗi 30 giây
+  startAutoRefresh(30000)
 })
 </script>
 
@@ -127,6 +170,35 @@ onMounted(() => {
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
+      <!-- Header với nút Refresh -->
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p class="text-gray-500 text-sm mt-1">Tổng quan quản lý đơn hàng</p>
+        </div>
+        <button
+          @click="refreshData"
+          :disabled="isLoading"
+          class="px-4 py-2 bg-glow-primary-600 text-white rounded-lg hover:bg-glow-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+        >
+          <svg 
+            class="w-4 h-4" 
+            :class="{ 'animate-spin': isLoading }"
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {{ isLoading ? 'Đang tải...' : 'Làm mới' }}
+        </button>
+      </div>
+
+      <!-- Error State -->
+      <div v-if="statsError" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p class="text-red-700 text-sm">⚠️ {{ statsError }}</p>
+      </div>
+
       <!-- Loading State -->
       <div v-if="isLoading && !statistics" class="text-center py-12">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-glow-primary-500 mx-auto"></div>
@@ -135,7 +207,7 @@ onMounted(() => {
 
       <template v-else>
         <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2 mb-10">
           <div
             v-for="(stat, index) in stats"
             :key="index"
@@ -162,7 +234,6 @@ onMounted(() => {
                   }"
                 />
               </div>
-             
             </div>
             <h3 class="text-gray-600 text-sm font-medium mb-1">{{ stat.title }}</h3>
             <p class="text-2xl font-bold text-gray-900">{{ stat.value }}</p>
@@ -199,7 +270,7 @@ onMounted(() => {
             </NuxtLink>
 
             <NuxtLink
-              to="/manager/orders/schedules"
+              to="/manager/schedules"
               class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all group"
             >
               <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">

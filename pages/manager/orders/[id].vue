@@ -139,11 +139,11 @@ const handleReject = async (orderId: string, reason: string, note: string) => {
   const success = await processOrder(orderId, 'reject', note, reason)
 
   if (success) {
-    alert('✅ Đã từ chối đơn hàng!')
+    alert(' Đã từ chối đơn hàng!')
     rejectTabRef.value?.clearSelectedOrder()
     await loadOrders()
   } else {
-    alert(`❌ Từ chối đơn thất bại: ${error.value}`)
+    alert(` Từ chối đơn thất bại: ${error.value}`)
   }
 }
 
@@ -155,7 +155,7 @@ const handleSave = async (orderId: string, data: any) => {
   const success = await editOrderInfo(orderId, data)
 
   if (success) {
-    alert('✅ Đã lưu thay đổi thành công!')
+    alert(' Đã lưu thay đổi thành công!')
     editTabRef.value?.clearSelectedOrder()
     await loadOrders()
   } else {

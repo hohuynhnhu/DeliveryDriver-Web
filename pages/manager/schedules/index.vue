@@ -9,9 +9,11 @@ import {
   MapPin,
   Plus,
   Filter,
-  RefreshCw
+  RefreshCw,
+  UserPlus  
 } from 'lucide-vue-next'
 import type { Schedule } from '@/@type/schedule'
+import AssignDriverModal from '@/components/modals/AssignDriverModal.vue' 
 
 definePageMeta({
   layout: 'manager',
@@ -26,6 +28,10 @@ const { getSchedules, isLoading } = useSchedule()
 const schedules = ref<Schedule[]>([])
 const filterDate = ref<string>('')
 const filterStatus = ref<string>('')
+
+//  THÊM STATE CHO MODAL
+const showAssignModal = ref(false)
+const selectedSchedule = ref<Schedule | null>(null)
 
 // ============================================================================
 // COMPUTED
@@ -74,15 +80,31 @@ const statistics = computed(() => {
 // ============================================================================
 const loadSchedules = async () => {
   schedules.value = await getSchedules()
-  console.log('📅 Loaded schedules:', schedules.value.length)
+  console.log(' Loaded schedules:', schedules.value.length)
 }
 
 const viewScheduleDetail = (scheduleId: string) => {
-  router.push(`/manager/orders/schedules/${scheduleId}`)
+  router.push(`/manager/schedules/${scheduleId}`)
 }
 
 const createNewSchedule = () => {
   router.push('/manager/orders/management?tab=confirmed')
+}
+
+//  THÊM METHODS CHO MODAL
+const openAssignModal = (schedule: Schedule, event: Event) => {
+  event.stopPropagation() // Prevent card click from triggering
+  console.log(' Opening assign modal for schedule:', schedule.id)
+  selectedSchedule.value = schedule
+  showAssignModal.value = true
+}
+
+const handleDriverAssigned = (driverId: string) => {
+  console.log(' Driver assigned successfully:', driverId)
+  showAssignModal.value = false
+  selectedSchedule.value = null
+  // Reload schedules to show updated driver info
+  loadSchedules()
 }
 
 const getStatusColor = (status: string) => {
@@ -259,8 +281,8 @@ onMounted(() => {
             <div
               v-for="schedule in schedulesForDate"
               :key="schedule.id"
+              class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-lg transition-all cursor-pointer relative group"
               @click="viewScheduleDetail(schedule.id)"
-              class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-lg transition-all cursor-pointer"
             >
               <!-- Status badge -->
               <div class="flex items-center justify-between mb-3">
@@ -280,12 +302,29 @@ onMounted(() => {
                 <span class="font-semibold text-gray-900">{{ schedule.area_code }}</span>
               </div>
 
-              <!-- Driver info -->
-              <div class="flex items-center gap-2 mb-3">
-                <Truck class="w-5 h-5 text-gray-600" />
-                <span class="text-sm text-gray-700">
-                  {{ schedule.driver_name || 'Chưa gán tài xế' }}
-                </span>
+              <!--  DRIVER INFO WITH ASSIGN BUTTON -->
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <Truck class="w-5 h-5 text-gray-600 flex-shrink-0" />
+                  <span class="text-sm text-gray-700 truncate">
+                    {{ schedule.driver_name || 'Chưa gán tài xế' }}
+                  </span>
+                </div>
+
+                <!--  ASSIGN DRIVER BUTTON -->
+                <button
+                  v-if="schedule.status !== 'completed' && schedule.status !== 'cancelled'"
+                  @click.stop="openAssignModal(schedule, $event)"
+                  :class="[
+                    'p-2 rounded-lg transition-all flex-shrink-0',
+                    schedule.driver_id 
+                      ? 'text-blue-600 hover:bg-blue-50 opacity-0 group-hover:opacity-100'
+                      : 'text-orange-600 hover:bg-orange-50 opacity-100 animate-pulse'
+                  ]"
+                  :title="schedule.driver_id ? 'Đổi tài xế' : 'Gán tài xế'"
+                >
+                  <UserPlus class="w-5 h-5" />
+                </button>
               </div>
 
               <!-- Orders count -->
@@ -305,5 +344,13 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!--  ASSIGN DRIVER MODAL -->
+    <AssignDriverModal
+      :show="showAssignModal"
+      :schedule="selectedSchedule"
+      @close="showAssignModal = false"
+      @assigned="handleDriverAssigned"
+    />
   </div>
 </template>

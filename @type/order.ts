@@ -96,3 +96,14 @@ export interface OrderResponse {
   created_at: string
   order_details: OrderDetailResponse[]
 }
+export interface OrderStatistics {
+  pending_count: number
+  confirmed_count: number
+  confirmed_pickup_pending: number
+  confirmed_pickup_scheduled: number
+  picked_count: number
+  processing_count: number
+  completed_count: number
+  cancelled_count: number
+  total_orders: number
+}

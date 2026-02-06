@@ -18,6 +18,8 @@ import type { ScheduleDetail } from '@/@type/schedule'
 definePageMeta({
   layout: 'manager',
 })
+console.log(' [id].vue LOADED')
+
 
 const route = useRoute()
 const router = useRouter()
@@ -84,10 +86,22 @@ const progressPercentage = computed(() => {
 // METHODS
 // ============================================================================
 const loadSchedule = async () => {
+  console.log('🔍 Loading schedule:', scheduleId.value) // ← THÊM
+  
   const data = await getScheduleDetail(scheduleId.value)
+  
+  console.log('📦 Raw schedule data:', data) // ← THÊM
+  
   if (data) {
     schedule.value = data
-    console.log('📅 Loaded schedule:', data)
+    console.log('✅ Schedule loaded successfully:', {
+      id: data.id,
+      driver_name: data.driver_name,
+      items_count: data.items?.length || 0,
+      items: data.items
+    })
+  } else {
+    console.error('❌ Schedule data is null')
   }
 }
 
@@ -138,7 +152,7 @@ const handleCancel = async () => {
 }
 
 const goBack = () => {
-  router.push('/manager/orders/schedules')
+  router.push('/manager/schedules')
 }
 
 const formatDate = (dateStr: string) => {

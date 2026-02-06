@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@left4code/tw-starter": "^3.1.35",
+    "@nuxtjs/supabase": "^2.0.3",
     "@nuxtjs/tailwindcss": "6.14.0",
     "@pinia/nuxt": "^0.1.9",
     "@vueuse/nuxt": "8.4.2",

@@ -2,6 +2,7 @@ import { STORAGE_KEYS } from '@/utils/constants'
 
 /// API Response wrapper
 interface ApiResponse<T> {
+  success: import("d:/HTQLTT/DeliveryDriver-Web/@type/schedule").ApiResponse<any> | null
   data: T | null
   error: string | null
   status: number

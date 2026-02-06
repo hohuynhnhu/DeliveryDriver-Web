@@ -62,9 +62,6 @@ const availableAreas = computed(() => {
   }))
 })
 
-// ============================================================================
-// METHODS
-// ============================================================================
 
 /**
  * Xem chi tiết order_details
@@ -84,13 +81,13 @@ const assignDriver = async () => {
   const success = await assignDriverToPickup(selectedOrder.value.id, selectedDriver.value)
 
   if (success) {
-    alert('✅ Đã gán tài xế thành công!')
+    alert(' Đã gán tài xế thành công!')
     showDriverModal.value = false
     selectedDriver.value = ''
     selectedOrder.value = null
     emit('refresh')
   } else {
-    alert('❌ Không thể gán tài xế')
+    alert(' Không thể gán tài xế')
   }
 }
 
@@ -118,13 +115,13 @@ const createScheduleWithGA = async () => {
   })
 
   if (result) {
-    alert(`✅ Đã tạo lịch giao hàng thành công!\nSchedule ID: ${result.schedule_id}\nĐã gán: ${result.total_orders_scheduled} đơn hàng`)
+    alert(` Đã tạo lịch giao hàng thành công!\nSchedule ID: ${result.schedule_id}\nĐã gán: ${result.total_orders_scheduled} đơn hàng`)
     showScheduleModal.value = false
     selectedAreas.value = []
     scheduledDate.value = ''
     emit('refresh')
   } else {
-    alert('❌ Không thể tạo lịch giao hàng')
+    alert('Không thể tạo lịch giao hàng')
   }
 }
 
