@@ -214,7 +214,7 @@ const toggleAreaSelection = (areaCode: string) => {
             <div class="flex items-center gap-4 text-sm text-gray-600">
               <div class="flex items-center gap-1">
                 <MapPin class="w-4 h-4" />
-                <span>{{ order.pickup_point }}</span>
+                <span>{{ order.pickup_point || 'Tại bưu cục' }}</span>
               </div>
               <div class="flex items-center gap-1">
                 <Package class="w-4 h-4" />

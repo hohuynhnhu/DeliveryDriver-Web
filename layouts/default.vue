@@ -8,6 +8,7 @@
     
     <main class="flex-grow">
       <slot />
+      <UToaster />
     </main>
     
     <AppFooter />

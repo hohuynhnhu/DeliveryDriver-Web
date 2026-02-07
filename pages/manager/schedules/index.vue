@@ -10,17 +10,23 @@ import {
   Plus,
   Filter,
   RefreshCw,
-  UserPlus  
+  UserPlus,
+  Zap,
+  Settings as SettingsIcon,
+  Trash2,
+  Eye
 } from 'lucide-vue-next'
-import type { Schedule } from '@/@type/schedule'
-import AssignDriverModal from '@/components/modals/AssignDriverModal.vue' 
+import type { Schedule, SchedulingResponse } from '@/@type/schedule'
+import AssignDriverModal from '@/components/modals/AssignDriverModal.vue'
+import CreateScheduleQuickModal from '@/components/manager/schedules/CreateScheduleQuickModal.vue'
+import CreateScheduleAdvancedModal from '@/components/manager/schedules/CreateScheduleAdvancedModal.vue'
 
 definePageMeta({
   layout: 'manager',
 })
 
 const router = useRouter()
-const { getSchedules, isLoading } = useSchedule()
+const { getSchedules, deleteSchedule,confirmSchedule,cancelSchedule, isLoading } = useSchedule()
 
 // ============================================================================
 // STATE
@@ -28,9 +34,12 @@ const { getSchedules, isLoading } = useSchedule()
 const schedules = ref<Schedule[]>([])
 const filterDate = ref<string>('')
 const filterStatus = ref<string>('')
+const filterArea = ref<string>('')
 
-//  THÊM STATE CHO MODAL
+// Modal states
 const showAssignModal = ref(false)
+const showQuickModal = ref(false)
+const showAdvancedModal = ref(false)
 const selectedSchedule = ref<Schedule | null>(null)
 
 // ============================================================================
@@ -47,8 +56,55 @@ const filteredSchedules = computed(() => {
     result = result.filter(s => s.status === filterStatus.value)
   }
 
+  if (filterArea.value) {
+    result = result.filter(s => s.area_code === filterArea.value)
+  }
+
   return result
 })
+const handleConfirmSchedule = async (schedule: Schedule, event: Event) => {
+  event.stopPropagation()
+
+  if (schedule.status !== 'draft') {
+    alert('❌ Chỉ có thể xác nhận lịch ở trạng thái bản nháp')
+    return
+  }
+
+  const ok = confirm(`Xác nhận lịch giao hàng ${schedule.area_code} - ${schedule.scheduled_date}?`)
+  if (!ok) return
+
+  const success = await confirmSchedule(schedule.id)
+
+  if (success) {
+    alert('✅ Đã xác nhận lịch')
+    loadSchedules()
+  } else {
+    alert('❌ Không thể xác nhận lịch')
+  }
+}
+
+const handleCancelSchedule = async (schedule: Schedule, event: Event) => {
+  event.stopPropagation()
+
+  if (schedule.status === 'completed') {
+    alert('❌ Không thể hủy lịch đã hoàn thành')
+    return
+  }
+
+  const reason = prompt('Nhập lý do hủy lịch (không bắt buộc):') || undefined
+
+  const ok = confirm(`Bạn chắc chắn muốn hủy lịch ${schedule.area_code} - ${schedule.scheduled_date}?`)
+  if (!ok) return
+
+  const success = await cancelSchedule(schedule.id, reason)
+
+  if (success) {
+    alert('✅ Đã hủy lịch')
+    loadSchedules()
+  } else {
+    alert('❌ Không thể hủy lịch')
+  }
+}
 
 const groupedSchedules = computed(() => {
   // Nhóm theo ngày
@@ -75,35 +131,74 @@ const statistics = computed(() => {
   }
 })
 
+const availableAreas = computed(() => {
+  return [...new Set(schedules.value.map(s => s.area_code))].sort()
+})
+
 // ============================================================================
 // METHODS
 // ============================================================================
 const loadSchedules = async () => {
   schedules.value = await getSchedules()
-  console.log(' Loaded schedules:', schedules.value.length)
+  console.log('📋 Loaded schedules:', schedules.value.length)
 }
 
 const viewScheduleDetail = (scheduleId: string) => {
   router.push(`/manager/schedules/${scheduleId}`)
 }
 
-const createNewSchedule = () => {
-  router.push('/manager/orders/management?tab=confirmed')
-}
-
-//  THÊM METHODS CHO MODAL
 const openAssignModal = (schedule: Schedule, event: Event) => {
-  event.stopPropagation() // Prevent card click from triggering
-  console.log(' Opening assign modal for schedule:', schedule.id)
+  event.stopPropagation()
+  console.log('👤 Opening assign modal for schedule:', schedule.id)
   selectedSchedule.value = schedule
   showAssignModal.value = true
 }
 
 const handleDriverAssigned = (driverId: string) => {
-  console.log(' Driver assigned successfully:', driverId)
+  console.log('✅ Driver assigned successfully:', driverId)
   showAssignModal.value = false
   selectedSchedule.value = null
-  // Reload schedules to show updated driver info
+  loadSchedules()
+}
+
+const handleDeleteSchedule = async (schedule: Schedule, event: Event) => {
+  event.stopPropagation()
+
+  // Validate
+  if (schedule.status !== 'draft') {
+    alert('❌ Chỉ có thể xóa lịch ở trạng thái draft')
+    return
+  }
+
+  if (schedule.driver_id) {
+    alert('❌ Không thể xóa lịch đã gán tài xế')
+    return
+  }
+
+  if (!confirm(`Xóa lịch ${schedule.area_code} - ${schedule.scheduled_date}?\n\nĐơn hàng sẽ được trả về trạng thái pending.`)) {
+    return
+  }
+
+  const success = await deleteSchedule(schedule.id)
+  
+  if (success) {
+    alert('✅ Đã xóa lịch thành công')
+    loadSchedules()
+  } else {
+    alert('❌ Không thể xóa lịch')
+  }
+}
+
+const handleScheduleCreated = (response: SchedulingResponse) => {
+  console.log('🎉 Created schedules:', response)
+  
+  const message = `
+ Tạo lịch thành công!
+
+${response.unassigned_order_ids.length > 0 ? `⚠️ ${response.unassigned_order_ids.length} đơn chưa xếp được` : ''}
+  `.trim()
+  
+  alert(message)
   loadSchedules()
 }
 
@@ -139,6 +234,12 @@ const formatDate = (dateStr: string) => {
   })
 }
 
+const clearFilters = () => {
+  filterDate.value = ''
+  filterStatus.value = ''
+  filterArea.value = ''
+}
+
 // ============================================================================
 // LIFECYCLE
 // ============================================================================
@@ -158,17 +259,28 @@ onMounted(() => {
             Lịch giao hàng
           </h1>
           <p class="text-gray-600">
-            Quản lý và theo dõi lịch giao hàng của tài xế
+            Quản lý và theo dõi lịch giao hàng với Genetic Algorithm
           </p>
         </div>
 
-        <button
-          @click="createNewSchedule"
-          class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
-        >
-          <Plus class="w-5 h-5" />
-          Tạo lịch mới
-        </button>
+        <!-- Create buttons -->
+        <div class="flex gap-3">
+          <button
+            @click="showQuickModal = true"
+            class="px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <Zap class="w-5 h-5" />
+            Tạo nhanh (GA)
+          </button>
+
+          <button
+            @click="showAdvancedModal = true"
+            class="px-4 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2"
+          >
+            <SettingsIcon class="w-5 h-5" />
+            Tạo nâng cao
+          </button>
+        </div>
       </div>
 
       <!-- STATISTICS CARDS -->
@@ -204,7 +316,7 @@ onMounted(() => {
         <div class="flex items-center gap-4">
           <Filter class="w-5 h-5 text-gray-600" />
           
-          <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
             <!-- Filter by date -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Ngày giao hàng</label>
@@ -213,6 +325,20 @@ onMounted(() => {
                 type="date"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+
+            <!-- Filter by area -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Khu vực</label>
+              <select
+                v-model="filterArea"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Tất cả</option>
+                <option v-for="area in availableAreas" :key="area" :value="area">
+                  {{ area }}
+                </option>
+              </select>
             </div>
 
             <!-- Filter by status -->
@@ -231,8 +357,16 @@ onMounted(() => {
               </select>
             </div>
 
-            <!-- Refresh button -->
-            <div class="flex items-end">
+            <!-- Action buttons -->
+            <div class="flex items-end gap-2">
+              <button
+                v-if="filterDate || filterStatus || filterArea"
+                @click="clearFilters"
+                class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-sm"
+              >
+                Xóa bộ lọc
+              </button>
+              
               <button
                 @click="loadSchedules"
                 :disabled="isLoading"
@@ -251,15 +385,20 @@ onMounted(() => {
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
 
-      <div v-else-if="filteredSchedules.length === 0" class="text-center py-12">
+      <div v-else-if="filteredSchedules.length === 0" class="text-center py-12 bg-white rounded-lg border border-gray-200">
         <Calendar class="w-16 h-16 mx-auto mb-4 text-gray-400" />
-        <p class="text-gray-600">Chưa có lịch giao hàng nào</p>
-        <button
-          @click="createNewSchedule"
-          class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
-        >
-          Tạo lịch đầu tiên
-        </button>
+        <p class="text-gray-600 mb-4">
+          {{ filterDate || filterStatus || filterArea ? 'Không tìm thấy lịch phù hợp' : 'Chưa có lịch giao hàng nào' }}
+        </p>
+        <div class="flex gap-3 justify-center">
+          <button
+            @click="showQuickModal = true"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Zap class="w-4 h-4" />
+            Tạo lịch nhanh
+          </button>
+        </div>
       </div>
 
       <!-- Grouped by date -->
@@ -302,7 +441,7 @@ onMounted(() => {
                 <span class="font-semibold text-gray-900">{{ schedule.area_code }}</span>
               </div>
 
-              <!--  DRIVER INFO WITH ASSIGN BUTTON -->
+              <!-- Driver info with assign button -->
               <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-2 flex-1 min-w-0">
                   <Truck class="w-5 h-5 text-gray-600 flex-shrink-0" />
@@ -311,7 +450,7 @@ onMounted(() => {
                   </span>
                 </div>
 
-                <!--  ASSIGN DRIVER BUTTON -->
+                <!-- Assign driver button -->
                 <button
                   v-if="schedule.status !== 'completed' && schedule.status !== 'cancelled'"
                   @click.stop="openAssignModal(schedule, $event)"
@@ -339,18 +478,66 @@ onMounted(() => {
                   <span>{{ schedule.completed_orders }}/{{ schedule.total_orders }}</span>
                 </div>
               </div>
+
+              <!-- Action buttons (show on hover) -->
+                <div
+  class="mt-3 pt-3 border-t border-gray-200 flex flex-wrap gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+>
+  <!-- Xem -->
+  <button
+    @click.stop="viewScheduleDetail(schedule.id)"
+    class="flex-1 px-3 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center justify-center gap-1"
+  >
+    <Eye class="w-4 h-4" />
+    Xem
+  </button>
+
+  <!-- Xác nhận lịch -->
+  <button
+    v-if="schedule.status === 'draft'"
+    @click.stop="handleConfirmSchedule(schedule, $event)"
+    class="flex-1 px-3 py-1.5 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center justify-center gap-1"
+  >
+    <CheckCircle2 class="w-4 h-4" />
+    Xác nhận
+  </button>
+
+  <!-- Hủy lịch -->
+  <button
+    v-if="schedule.status !== 'completed' && schedule.status !== 'cancelled'"
+    @click.stop="handleCancelSchedule(schedule, $event)"
+    class="flex-1 px-3 py-1.5 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center justify-center gap-1"
+  >
+    <Trash2 class="w-4 h-4" />
+    Hủy
+  </button>
+
+</div>
+
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!--  ASSIGN DRIVER MODAL -->
+    <!-- MODALS -->
     <AssignDriverModal
       :show="showAssignModal"
       :schedule="selectedSchedule"
       @close="showAssignModal = false"
       @assigned="handleDriverAssigned"
+    />
+
+    <CreateScheduleQuickModal
+      v-if="showQuickModal"
+      @close="showQuickModal = false"
+      @success="handleScheduleCreated"
+    />
+
+    <CreateScheduleAdvancedModal
+      v-if="showAdvancedModal"
+      @close="showAdvancedModal = false"
+      @success="handleScheduleCreated"
     />
   </div>
 </template>

@@ -5,6 +5,7 @@
 <template>
   <div>
     <!-- Render if has permission -->
+     <UToaster />
     <NuxtPage />
   </div>
 </template>

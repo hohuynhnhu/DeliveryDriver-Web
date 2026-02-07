@@ -253,7 +253,7 @@ onMounted(() => {
                 </div>
                 
                 <p class="text-sm text-gray-700 mb-2 line-clamp-2">
-                 {{ order.pickup_point }}
+                 {{ order.pickup_point || 'Tại bưu cục'}}
                 </p>
                 
                 <div class="flex items-center justify-between text-xs">
@@ -327,7 +327,7 @@ onMounted(() => {
 
               <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <p class="text-xs text-gray-500 mb-1">Địa chỉ lấy hàng</p>
-                <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.pickup_point }}</p>
+                <p class="text-sm font-semibold text-gray-900">{{ selectedOrder.pickup_point || 'Tại bưu cục' }}</p>
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

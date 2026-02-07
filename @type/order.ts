@@ -5,11 +5,21 @@ export interface GeoPoint {
 
 export interface OrderSummary{
   id:string 
-  pickup_point:string
+  pickup_point:string | null
   status:'pending' | 'comfirmed' | 'processing' | 'completed' | 'cancelled'
   created_at:string
+  order_type: 'drop_off' | 'pickup'
+  pickup_area_code: string | null
   pickup_status:'pending' | 'scheduled' | 'picked' | 'failed'
   total_packages:number
+}
+export interface OrderFilters {
+  status?:'pending' | 'comfirmed' | 'processing' | 'completed' | 'cancelled'
+  pickup_status?: 'pending' | 'scheduled' | 'picked' | 'failed'
+  order_type?: 'drop_off' | 'pickup'
+  pickup_area_code?: string
+  skip?: number
+  limit?: number
 }
 
 export interface OrderDetail{
@@ -54,7 +64,7 @@ export interface OrderDetailCreateDTO {
 export interface OrderCreateDTO {
   user_id: string
   post_office_id: string
-  pickup_point: string
+  pickup_point?: string
   pickup_address: string
   pickup_area_code: string
   pickup_location?: GeoPoint

@@ -61,12 +61,14 @@
   <main class="p-6">
     <slot />
   </main>
+  <UToaster />
+
 </template>
 
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Home, Package, Activity, LogOut,  BarChart3, Calendar, Bell } from 'lucide-vue-next'
+import { Home, Package, Activity, LogOut,  BarChart3, Calendar, Bell, InfoIcon, Store } from 'lucide-vue-next'
 import { useAuth } from '@/composables/useAuth'
 const route = useRoute()
 const { user, logout } = useAuth()
@@ -82,12 +84,13 @@ const menu = [
   { key: 'theodoi', label: 'Theo Dõi Trạng Thái', to: '/manager/orders', icon: Activity },
   { key: 'dotxuat', label: 'Thông báo', to: '/manager/orders/emergency', icon: Bell },
   { key: 'phanich', label: 'Phân Tích', to: '/manager/analytics', icon: BarChart3 },
+  { key: 'store', label: 'Thông tin', to: '/manager/post-offices', icon: Store },
 ]
 
 /* Active section */
 const activeSection = computed(() => {
   const path = route.path
-
+  if(path.startsWith('/manager/post-offices')) return 'store'
   if (path.startsWith('/manager/schedules')) return 'phancong'
   if (path.startsWith('/manager/orders/emergency')) return 'dotxuat'
   if (path === '/manager/orders') return 'theodoi'

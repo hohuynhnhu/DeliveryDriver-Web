@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { Package, Users, AlertCircle, Zap, ShoppingCart, CheckCircle2, BadgeCheck, CircleX,  } from 'lucide-vue-next'
+import { Package, Users, AlertCircle, Zap, ShoppingCart, CheckCircle2, BadgeCheck, CircleX } from 'lucide-vue-next'
 import type { OrderSummary } from '@/@type/order'
 
 definePageMeta({
@@ -8,12 +8,10 @@ definePageMeta({
 })
 
 const { user } = useAuth()
-const { fetchPostOfficeOrders } = useOrder()
 
 // ============================================================================
 // COMPOSABLES
 // ============================================================================
-// Sử dụng composable useOrderStatistics
 const { 
   fetchStatistics, 
   statistics, 
@@ -22,11 +20,23 @@ const {
   startAutoRefresh
 } = useOrderStatistics()
 
+const {
+  orders,
+  loading: ordersLoading,
+  error: ordersError,
+  filters,
+  setFilter,
+  resetFilters,
+  fetchOrders
+} = usePostOfficeOrders()
+
 // ============================================================================
 // STATE
 // ============================================================================
-const recentOrders = ref<OrderSummary[]>([])
-const ordersLoading = ref(false)
+const recentOrders = computed(() => {
+  // Lấy 5 đơn hàng đầu tiên từ orders
+  return orders.value.slice(0, 5)
+})
 
 // ============================================================================
 // COMPUTED - STATS CARDS
@@ -62,16 +72,15 @@ const stats = computed(() => {
     { 
       title: 'Đã lấy hàng', 
       value: statistics.value.picked_count,
-      icon:  Package,
+      icon: Package,
       color: 'blue'
     },
     {
       title:'Hoàn thành',
-      value:statistics.value.completed_count,
-      icon : CheckCircle2,
+      value: statistics.value.completed_count,
+      icon: CheckCircle2,
       color:'green'
     },
-    
   ]
 })
 
@@ -82,19 +91,18 @@ const isLoading = computed(() => statsLoading.value || ordersLoading.value)
 // METHODS
 // ============================================================================
 const loadRecentOrders = async () => {
-  ordersLoading.value = true
   try {
-    const allOrders = await fetchPostOfficeOrders({ 
-      status: 'pending',
-      limit: 5 
-    })
-    recentOrders.value = allOrders || []
+    // Set filter để lấy đơn hàng pending, limit 5
+    setFilter('status', 'pending')
+    setFilter('limit', 5)
     
-    console.log(' Recent orders loaded:', recentOrders.value.length)
+    // fetchOrders sẽ tự động được gọi do watch trong composable
+    // hoặc gọi thủ công nếu cần:
+    await fetchOrders()
+    
+    console.log('📦 Recent orders loaded:', recentOrders.value.length)
   } catch (e) {
-    console.error(' Error loading recent orders:', e)
-  } finally {
-    ordersLoading.value = false
+    console.error('❌ Error loading recent orders:', e)
   }
 }
 
@@ -111,7 +119,7 @@ const loadData = async () => {
       orders: recentOrders.value.length
     })
   } catch (e) {
-    console.error(' Error loading dashboard:', e)
+    console.error('❌ Error loading dashboard:', e)
   }
 }
 
@@ -195,8 +203,8 @@ onMounted(async () => {
       </div>
 
       <!-- Error State -->
-      <div v-if="statsError" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p class="text-red-700 text-sm">⚠️ {{ statsError }}</p>
+      <div v-if="statsError || ordersError" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p class="text-red-700 text-sm">⚠️ {{ statsError || ordersError }}</p>
       </div>
 
       <!-- Loading State -->
@@ -220,7 +228,8 @@ onMounted(async () => {
                   'bg-blue-100': stat.color === 'blue',
                   'bg-green-100': stat.color === 'green',
                   'bg-purple-100': stat.color === 'purple',
-                  'bg-orange-100': stat.color === 'orange'
+                  'bg-orange-100': stat.color === 'orange',
+                  'bg-red-100': stat.color === 'red'
                 }"
               >
                 <component 
@@ -230,7 +239,8 @@ onMounted(async () => {
                     'text-blue-600': stat.color === 'blue',
                     'text-green-600': stat.color === 'green',
                     'text-purple-600': stat.color === 'purple',
-                    'text-orange-600': stat.color === 'orange'
+                    'text-orange-600': stat.color === 'orange',
+                    'text-red-600': stat.color === 'red'
                   }"
                 />
               </div>
@@ -336,7 +346,7 @@ onMounted(async () => {
                   <td class="py-3 px-4 text-sm font-medium text-gray-900">
                     #{{ order.id.substring(0, 8) }}...
                   </td>
-                  <td class="py-3 px-4 text-sm text-gray-700">{{ order.pickup_point }}</td>
+                  <td class="py-3 px-4 text-sm text-gray-700">{{ order.pickup_point || 'Tại bưu cục'}}</td>
                   <td class="py-3 px-4">
                     <span 
                       class="px-3 py-1 text-xs font-semibold rounded-full"

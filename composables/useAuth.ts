@@ -175,7 +175,6 @@ export const useAuth = () => {
     error.value = null
 
     try {
-      // SỬA: Dùng SearchUserResponse cho API call vì backend trả về location dạng chuỗi
       const response = await api.get<SearchUserResponse>(
         API_ENDPOINTS.SEARCH_USER(keyword),
         true

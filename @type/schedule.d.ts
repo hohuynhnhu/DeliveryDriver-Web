@@ -209,3 +209,8 @@ export interface OrderFilters {
   status?: string
   area_code?: string
 }
+
+export interface DeleteScheduleResponse {
+  success: boolean
+  message: string
+}

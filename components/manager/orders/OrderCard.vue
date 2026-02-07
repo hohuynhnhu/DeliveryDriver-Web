@@ -83,7 +83,7 @@ const borderColor = computed(() => {
 
     <div class="mb-3">
       <p class="text-xs text-gray-500">Địa chỉ lấy hàng</p>
-      <p class="text-sm text-gray-700 line-clamp-1">{{ order.pickup_point }}</p>
+      <p class="text-sm text-gray-700 line-clamp-1">{{ order.pickup_point || 'Tại bưu cục' }}</p>
     </div>
 
     <div class="flex items-center justify-between text-xs text-gray-500">

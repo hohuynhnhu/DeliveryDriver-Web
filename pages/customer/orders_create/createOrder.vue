@@ -142,7 +142,7 @@ const handleSubmit = async () => {
     const payload: OrderCreateDTO = {
       user_id: user.value.id,
       post_office_id: postOfficeId.value, 
-      pickup_point: senderInfo.value.address,
+      pickup_point: senderInfo.value.address || undefined,
       pickup_address: senderInfo.value.address,
       pickup_area_code: senderInfo.value.areaCode,
       pickup_location: senderInfo.value.location || undefined,

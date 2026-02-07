@@ -63,7 +63,7 @@ const formatDate = (dateStr: string) => {
     
     <div class="mb-4">
       <p class="text-xs font-semibold text-gray-700 mb-2">Thông tin lấy hàng</p>
-      <p class="text-sm text-gray-600">{{ order.pickup_point }}</p>
+      <p class="text-sm text-gray-600">{{ order.pickup_point || 'tại bưu cục'}}</p>
       <p class="text-sm text-gray-600">{{ order.pickup_address }}</p>
       <p class="text-sm text-gray-600">{{ order.pickup_phone }}</p>
     </div>

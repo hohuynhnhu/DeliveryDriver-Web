@@ -1,6 +1,6 @@
 // composables/useOrderManagement.ts - FIXED VERSION
 import { API_ENDPOINTS } from '@/utils/constants'
-import type { OrderSummary } from '@/@type/order'
+import type { OrderSummary, OrderFilters } from '@/@type/order'
 
 // ============================================================================
 // INTERFACES
@@ -31,14 +31,6 @@ interface PickupScheduleRequest {
 
 interface OrdersByArea {
   [areaCode: string]: any[]
-}
-
-interface OrderStatistics {
-  pending_count: number
-  confirmed_pickup_count: number
-  confirmed_dropoff_count: number
-  picked_count: number
-  total_confirmed: number
 }
 
 // ============================================================================
@@ -357,37 +349,6 @@ export const useOrderManagement = () => {
     }
   }
 
-  // ============================================================================
-  // 5. STATISTICS
-  // ============================================================================
-
-  const getOrderStatistics = async (): Promise<OrderStatistics | null> => {
-    if (!postOfficeId.value) return null
-
-    try {
-      const [pending, confirmed, picked] = await Promise.all([
-        getPendingOrders(),
-        getConfirmedOrders(),
-        getPickedOrders()
-      ])
-
-      const pendingCount = Array.isArray(pending) ? pending.length : 0
-      const pickedCount = Array.isArray(picked) ? picked.length : 0
-      const pickupCount = Array.isArray(confirmed.pickup) ? confirmed.pickup.length : 0
-      const dropoffCount = Array.isArray(confirmed.dropoff) ? confirmed.dropoff.length : 0
-
-      return {
-        pending_count: pendingCount,
-        confirmed_pickup_count: pickupCount,
-        confirmed_dropoff_count: dropoffCount,
-        picked_count: pickedCount,
-        total_confirmed: pickupCount + dropoffCount
-      }
-    } catch (e) {
-      console.error('❌ Error getting statistics:', e)
-      return null
-    }
-  }
 
   return {
     isLoading,
@@ -406,7 +367,5 @@ export const useOrderManagement = () => {
     // Details
     getOrderDetails,
     getScheduleItems,
-    // Statistics
-    getOrderStatistics
   }
 }

@@ -32,7 +32,7 @@ export default defineNuxtConfig({
     },
   },
 
-  modules: ['@nuxtjs/tailwindcss','@nuxtjs/supabase',],
+  modules: ['@nuxtjs/tailwindcss','@nuxtjs/supabase','@nuxt/ui'],
   supabase: {
     url: process.env.NUXT_PUBLIC_SUPABASE_URL,
     key: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY,

@@ -11,7 +11,8 @@ import type {
   OrdersByArea,
   OrderStatisticsByArea,
   ScheduleFilters,
-  CreateScheduleRequest
+  CreateScheduleRequest,
+  DeleteScheduleResponse
 } from '@/@type/schedule'
 
 export const useSchedule = () => {
@@ -21,56 +22,7 @@ export const useSchedule = () => {
   const isLoading = useState<boolean>('schedule_loading', () => false)
   const error = useState<string | null>('schedule_error', () => null)
 
-  // ============================================================================
-  // 1. ORDER ENDPOINTS - Xem đơn hàng
-  // ============================================================================
 
-  /**
-   * Lấy đơn hàng với priority score
-   */
-  const getOrdersWithPriority = async (status: string = 'pending'): Promise<OrderDetail[]> => {
-    if (!postOfficeId.value) return []
-
-    isLoading.value = true
-    error.value = null
-
-    try {
-      const response = await api.post<ApiResponse<OrderDetail[]>>(
-        '/api/approve-orders/list-with-priority',
-        {
-          post_office_id: postOfficeId.value,
-          status
-        },
-        true
-      )
-
-      console.log('📦 Orders with priority response:', response)
-
-      let orders: OrderDetail[] = []
-
-      if (response?.data?.data && Array.isArray(response.data.data)) {
-        orders = response.data.data
-      } else if (response?.data && Array.isArray(response.data)) {
-        orders = response.data as unknown as OrderDetail[]
-      } else if (Array.isArray(response)) {
-        orders = response
-      }
-
-      console.log(`✅ Loaded ${orders.length} orders with priority`)
-      return orders
-
-    } catch (e) {
-      console.error('Error fetching orders with priority:', e)
-      error.value = 'Không thể tải danh sách đơn hàng'
-      return []
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  /**
-   * Lấy đơn hàng nhóm theo area_code
-   */
   const getOrdersGroupedByArea = async (status: string = 'pending'): Promise<OrdersByArea> => {
     if (!postOfficeId.value) return {}
 
@@ -154,7 +106,7 @@ export const useSchedule = () => {
   }
 
   /**
-   * Xử lý tất cả đơn pending (tạo schedules)
+   * Xử lý tất cả đơn confirmed (tạo schedules)
    */
   const processAllPendingOrders = async (): Promise<SchedulingResponse | null> => {
     if (!postOfficeId.value) return null
@@ -396,7 +348,7 @@ export const useSchedule = () => {
       )
 
       if (response?.success || response?.data) {
-        console.log('✅ Đã gán tài xế cho schedule:', scheduleId)
+        console.log(' Đã gán tài xế cho schedule:', scheduleId)
         return true
       }
 
@@ -560,7 +512,7 @@ export const useSchedule = () => {
         true
       )
 
-      console.log('✅ Created quick schedule:', response)
+      console.log(' Created quick schedule:', response)
       return (response?.data as SchedulingResponse) || null
 
     } catch (e) {
@@ -634,17 +586,80 @@ export const useSchedule = () => {
     }
   }
 
+  const deleteSchedule = async (scheduleId: string): Promise<boolean> => {
+  isLoading.value = true
+  error.value = null
+
+  try {
+    // 1. Kiểm tra schedule có thể xóa không
+    const schedule = await getScheduleDetail(scheduleId)
+    
+    if (!schedule) {
+      error.value = 'Không tìm thấy lịch'
+      return false
+    }
+
+    // 2. Validate: Chỉ xóa nếu draft và chưa có driver
+    if (schedule.status !== 'draft') {
+      error.value = 'Chỉ có thể xóa lịch ở trạng thái draft'
+      return false
+    }
+
+    if (schedule.driver_id) {
+      error.value = 'Không thể xóa lịch đã gán tài xế'
+      return false
+    }
+
+    // 3. Gọi API xóa
+    const response = await api.del<ApiResponse<DeleteScheduleResponse>>(
+      `/api/approve-orders/schedules/${scheduleId}`,
+      true
+    )
+
+    if (response?.data?.success || response?.success) {
+      console.log('🗑️ Đã xóa schedule:', scheduleId)
+      return true
+    }
+
+    error.value = 'Không thể xóa lịch'
+    return false
+
+  } catch (e) {
+    console.error('Error deleting schedule:', e)
+    error.value = 'Lỗi khi xóa lịch'
+    return false
+  } finally {
+    isLoading.value = false
+  }
+}
+
+/**
+ * Lấy danh sách area_codes có đơn hàng confirmed
+ */
+const getAvailableAreas = async (): Promise<string[]> => {
+  if (!postOfficeId.value) return []
+
+  try {
+    const grouped = await getOrdersGroupedByArea('pending')
+    return Object.keys(grouped).filter(area => grouped[area].total_orders > 0)
+  } catch (e) {
+    console.error('Error getting available areas:', e)
+    return []
+  }
+}
   return {
     // State
     isLoading,
     error,
 
     // Order endpoints
-    getOrdersWithPriority,
+    // getOrdersWithPriority,
     getOrdersGroupedByArea,
     getOrdersByArea,
     processAllPendingOrders,
     processOrdersByArea,
+    deleteSchedule,
+    getAvailableAreas,
 
     // Schedule endpoints
     getSchedules,
